@@ -284,7 +284,10 @@ function Index() {
                   </span>
                 )}
               </div>
-              <div className="h-64 w-full" aria-label="Courbe du seuil de bascule entre coût humain et coût IA">
+              <div
+                className="h-64 w-full"
+                aria-label="Courbe du seuil de bascule entre coût humain et coût IA"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
