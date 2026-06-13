@@ -231,6 +231,9 @@ export function evaluate(scenario: Scenario): EvaluationResult {
   const totalTokensThousands =
     (safe(scenario.inputTokensPerTask) + safe(scenario.outputTokensPerTask)) / 1_000;
   const energyWh = volume * totalTokensThousands * model.energyWhPerThousandTokens;
+  const waterMlOnSite = energyWh * 1.7;
+  const waterMlLifeCycle = energyWh * 45;
+  const waterMl = scenario.waterScope === "life-cycle" ? waterMlLifeCycle : waterMlOnSite;
 
   return {
     recommendation,
@@ -244,7 +247,9 @@ export function evaluate(scenario: Scenario): EvaluationResult {
     costPerTask: { apiTokens, humanReview, errorRisk },
     footprint: {
       energyWh,
-      waterMl: energyWh * 1.7,
+      waterMl,
+      waterMlOnSite,
+      waterMlLifeCycle,
       carbonGCo2e: energyWh * 0.42,
     },
   };
