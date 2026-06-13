@@ -47,6 +47,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 40,
     region: "france",
+    waterScope: "on-site",
   },
   "fiches-produit": {
     taskName: "Rédaction de fiches produit",
@@ -64,6 +65,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 60,
     region: "france",
+    waterScope: "on-site",
   },
   "tri-candidatures": {
     taskName: "Tri de candidatures RH",
@@ -81,6 +83,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 50,
     region: "france",
+    waterScope: "on-site",
   },
 };
 
