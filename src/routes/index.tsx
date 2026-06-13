@@ -46,6 +46,7 @@ const DEFAULTS: Scenario = {
   amortizationMonths: 12,
   monthlySubscriptionEur: 40,
   region: "france",
+  waterScope: "on-site",
 };
 const eur = new Intl.NumberFormat("fr-FR", {
   style: "currency",
