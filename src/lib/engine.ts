@@ -8,6 +8,7 @@ export type ModelId =
   | "other";
 
 export type Region = "france" | "eu" | "usa" | "world";
+export type WaterScope = "on-site" | "life-cycle";
 export type Recommendation = "AUTOMATISER" | "HYBRIDE" | "GARDER HUMAIN";
 
 export interface Scenario {
@@ -26,6 +27,7 @@ export interface Scenario {
   amortizationMonths: number;
   monthlySubscriptionEur: number;
   region: Region;
+  waterScope: WaterScope;
 }
 
 export const PRESETS: Record<string, Scenario> = {
