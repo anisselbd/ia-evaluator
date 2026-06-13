@@ -1277,6 +1277,7 @@ function LandingHero({
   const contentRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const modeRef = useRef<"loop" | "scrub">("loop");
+  const smootherRef = useRef<any>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -1293,17 +1294,28 @@ function LandingHero({
     };
 
     (async () => {
-      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+      const [{ gsap }, { ScrollTrigger }, { ScrollSmoother }] = await Promise.all([
         import("gsap"),
         import("gsap/ScrollTrigger"),
+        import("gsap/ScrollSmoother"),
       ]);
       if (!mounted) return;
-      gsap.registerPlugin(ScrollTrigger);
+      gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
       const mm = gsap.matchMedia();
 
       // DESKTOP : la vidéo de FOND scrub sur TOUTE la hauteur de page (pas de pin,
       // le contenu défile par-dessus). Boucle surface au repos, scrub dès le scroll.
       mm.add("(min-width: 769px) and (prefers-reduced-motion: no-preference)", () => {
+        // Scroll inertiel : le contenu glisse en douceur, le scrub vidéo devient soyeux.
+        const smoother = ScrollSmoother.create({
+          wrapper: "#smooth-wrapper",
+          content: "#smooth-content",
+          smooth: 1,
+          effects: true,
+          smoothTouch: 0,
+        });
+        smootherRef.current = smoother;
+
         modeRef.current = "loop";
         video.loop = false;
         video.currentTime = 0;
@@ -1352,6 +1364,8 @@ function LandingHero({
           fade.scrollTrigger?.kill();
           fade.kill();
           st.kill();
+          smoother.kill();
+          smootherRef.current = null;
         };
       });
 
@@ -1391,8 +1405,9 @@ function LandingHero({
         <div className="absolute inset-0 bg-slate-950/55" />
       </div>
 
-      {/* Contenu qui défile PAR-DESSUS la vidéo. */}
-      <div ref={pageRef} className="relative z-10">
+      {/* ScrollSmoother : le contenu (lissé) défile PAR-DESSUS la vidéo fixe. */}
+      <div id="smooth-wrapper" className="relative z-10">
+        <div id="smooth-content" ref={pageRef}>
         <section
           ref={heroRef}
           className="relative flex min-h-screen flex-col items-center justify-center px-4 text-center"
@@ -1479,7 +1494,14 @@ function LandingHero({
           </div>
         </section>
 
-        <LandingShowcase onCTA={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+          <LandingShowcase
+            onCTA={() => {
+              const s = smootherRef.current;
+              if (s) s.scrollTo(0, true);
+              else window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        </div>
       </div>
     </main>
   );
