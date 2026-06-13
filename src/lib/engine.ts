@@ -457,3 +457,121 @@ export function evaluatePortfolio(scenarios: Scenario[]): PortfolioResult {
     countKeepHuman: processes.filter((p) => p.result.recommendation === "GARDER HUMAIN").length,
   };
 }
+
+// =============================================================================
+// TROISIÈME VOIE : IA LOCALE SOUVERAINE (modèle open-source sur l'infra du client).
+// Compare humain / cloud (API) / local (souverain). En local, pas de coût par
+// token : à la place, infra GPU amortie + électricité + maintenance. La vérification
+// humaine et le risque d'erreur sont identiques (ils dépendent de la tâche, pas du
+// déploiement). Données souveraines : rien ne sort vers un fournisseur externe.
+// =============================================================================
+
+export interface LocalInfra {
+  hardwareCostEur: number; // serveur GPU (achat)
+  amortizationMonths: number; // amortissement matériel
+  maintenanceMonthlyEur: number; // supervision, MLOps, mises à jour
+  gpuPowerW: number; // puissance GPU sous charge
+  inferenceSecondsPerTask: number; // durée d'inférence par tâche
+  electricityPriceEurPerKWh: number;
+}
+
+// Valeurs par défaut réalistes pour un serveur d'inférence pro d'entrée de gamme.
+export const DEFAULT_LOCAL_INFRA: LocalInfra = {
+  hardwareCostEur: 18000,
+  amortizationMonths: 36,
+  maintenanceMonthlyEur: 400,
+  gpuPowerW: 700,
+  inferenceSecondsPerTask: 4,
+  electricityPriceEurPerKWh: 0.2,
+};
+
+export interface DeploymentOption {
+  monthly: number;
+  perTaskVariable: number;
+  fixedMonthly: number;
+}
+
+export interface DeploymentComparison {
+  human: { monthly: number };
+  cloud: DeploymentOption;
+  local: DeploymentOption & { energyWhMonthly: number; carbonGCo2eMonthly: number };
+  cheapest: "human" | "cloud" | "local";
+  // Surcoût (ou économie) de la souveraineté par rapport au cloud.
+  sovereigntyPremiumMonthly: number;
+  sovereigntyPremiumRate: number;
+  // Volume à partir duquel le local devient aussi avantageux que le cloud.
+  // null si le local n'est jamais moins cher (cas fréquent : les tokens API sont
+  // déjà dérisoires, donc le local se justifie par la souveraineté, pas le prix).
+  localBreakEvenVsCloudVolume: number | null;
+}
+
+export function compareDeployments(
+  scenario: Scenario,
+  infra: LocalInfra = DEFAULT_LOCAL_INFRA,
+): DeploymentComparison {
+  const model = MODEL_FACTORS[scenario.model];
+  const volume = safe(scenario.monthlyVolume);
+  const hourlyCost = safe(scenario.loadedHourlyCostEur);
+  const reviewRate = Math.min(1, safe(scenario.humanReviewRate));
+  const errorRate = Math.min(1, safe(scenario.residualErrorRate));
+
+  // Communs aux deux voies IA (dépendent de la tâche, pas du déploiement).
+  const humanReview = reviewRate * (safe(scenario.reviewMinutes) / 60) * hourlyCost;
+  const errorRisk = errorRate * safe(scenario.errorCostEur);
+
+  // Humain seul
+  const humanPerTask = (safe(scenario.humanMinutesPerTask) / 60) * hourlyCost;
+  const humanMonthly = volume * humanPerTask;
+
+  // Cloud (API, coût par token)
+  const cloudTokens =
+    (safe(scenario.inputTokensPerTask) / 1_000_000) * model.inputEurPerMillionTokens +
+    (safe(scenario.outputTokensPerTask) / 1_000_000) * model.outputEurPerMillionTokens;
+  const cloudVar = cloudTokens + humanReview + errorRisk;
+  const cloudFixed =
+    safe(scenario.monthlySubscriptionEur) +
+    safe(scenario.setupCostEur) / Math.max(1, safe(scenario.amortizationMonths));
+  const cloudMonthly = volume * cloudVar + cloudFixed;
+
+  // Local souverain (infra amortie + électricité, pas de coût par token)
+  const energyWhPerTask = (infra.gpuPowerW * infra.inferenceSecondsPerTask) / 3600;
+  const elecPerTask = (energyWhPerTask / 1000) * infra.electricityPriceEurPerKWh;
+  const localVar = elecPerTask + humanReview + errorRisk;
+  const localFixed =
+    infra.hardwareCostEur / Math.max(1, infra.amortizationMonths) + infra.maintenanceMonthlyEur;
+  const localMonthly = volume * localVar + localFixed;
+
+  const energyWhMonthly = volume * energyWhPerTask;
+  const carbonGCo2eMonthly = energyWhMonthly * CARBON_G_PER_WH[scenario.region];
+
+  const costs: { key: "human" | "cloud" | "local"; v: number }[] = [
+    { key: "human", v: humanMonthly },
+    { key: "cloud", v: cloudMonthly },
+    { key: "local", v: localMonthly },
+  ];
+  const cheapest = costs.sort((a, b) => a.v - b.v)[0].key;
+
+  // Seuil de bascule cloud -> local
+  const varGap = cloudVar - localVar; // ce que le local économise par tâche (tokens évités - élec)
+  const fixedGap = localFixed - cloudFixed; // surcoût fixe d'infra du local
+  let localBreakEvenVsCloudVolume: number | null = null;
+  if (varGap > 0) {
+    localBreakEvenVsCloudVolume = fixedGap > 0 ? Math.ceil(fixedGap / varGap) : 0;
+  }
+
+  return {
+    human: { monthly: humanMonthly },
+    cloud: { monthly: cloudMonthly, perTaskVariable: cloudVar, fixedMonthly: cloudFixed },
+    local: {
+      monthly: localMonthly,
+      perTaskVariable: localVar,
+      fixedMonthly: localFixed,
+      energyWhMonthly,
+      carbonGCo2eMonthly,
+    },
+    cheapest,
+    sovereigntyPremiumMonthly: localMonthly - cloudMonthly,
+    sovereigntyPremiumRate: cloudMonthly > 0 ? (localMonthly - cloudMonthly) / cloudMonthly : 0,
+    localBreakEvenVsCloudVolume,
+  };
+}
