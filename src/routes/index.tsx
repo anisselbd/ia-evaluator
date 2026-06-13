@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -226,94 +226,17 @@ function Index() {
 
   if (!analyzed) {
     return (
-      <main className="relative min-h-screen overflow-hidden text-white">
-        <video
-          className="absolute inset-0 size-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          src="/hero-iceberg.mp4"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/35 to-slate-950/75" />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <HeaderBar light onReset={reset} />
-          <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 text-center">
-            <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700">
-              <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-medium text-white/85 backdrop-blur">
-                Automatiser, oui. Mais à quel prix ?
-              </span>
-              <h1 className="mx-auto mt-5 max-w-xl text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl">
-                Le vrai coût de l’automatisation
-              </h1>
-              <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/80 drop-shadow">
-                Décrivez un process. On vous dit s’il faut l’automatiser, avec quel modèle, et combien
-                ça coûte vraiment : vérification humaine, risque d’erreur et empreinte compris.
-              </p>
-
-              <div className="mt-9 rounded-[28px] border border-white/25 bg-white/10 p-2.5 text-left shadow-2xl shadow-black/40 backdrop-blur-xl transition-colors focus-within:border-white/45">
-                <textarea
-                  className="min-h-[96px] w-full resize-none bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/50"
-                  placeholder="Ex : automatiser le tri des emails entrants de l’entreprise par importance et par sujet"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runEstimate();
-                  }}
-                />
-                <div className="flex items-center justify-between gap-2 px-2 pb-1">
-                  <span className="text-[11px] text-white/60">
-                    Estimé par Claude Haiku · quelques centièmes de centime
-                  </span>
-                  <button
-                    type="button"
-                    onClick={runEstimate}
-                    disabled={estimating || !description.trim()}
-                    className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
-                  >
-                    <Sparkles className="size-4" />
-                    {estimating ? "Analyse en cours…" : "Analyser"}
-                  </button>
-                </div>
-              </div>
-              {estimateError && <p className="mt-3 text-sm text-rose-200">{estimateError}</p>}
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-                <span className="text-xs text-white/60">Exemples :</span>
-                {Object.entries(PRESETS).map(([key, preset]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => usePreset(preset)}
-                    className="rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs text-white/85 backdrop-blur transition-all hover:scale-[1.04] hover:border-white/45 hover:bg-white/20"
-                  >
-                    {preset.taskName}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
-                <button
-                  type="button"
-                  onClick={manualEntry}
-                  className="text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
-                >
-                  ou saisir les paramètres à la main
-                </button>
-                <span className="text-white/25">·</span>
-                <button
-                  type="button"
-                  onClick={() => setPortfolio(true)}
-                  className="flex items-center gap-1.5 text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
-                >
-                  <Layers className="size-3.5" />
-                  voir un portefeuille d’entreprise
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+      <LandingHero
+        description={description}
+        setDescription={setDescription}
+        runEstimate={runEstimate}
+        estimating={estimating}
+        estimateError={estimateError}
+        usePreset={usePreset}
+        manualEntry={manualEntry}
+        onPortfolio={() => setPortfolio(true)}
+        onReset={reset}
+      />
     );
   }
 
@@ -1301,4 +1224,298 @@ function pct(value: number) {
     style: "percent",
     maximumFractionDigits: value < 0.01 ? 2 : 1,
   }).format(value);
+}
+
+// =============================================================================
+// HERO SCROLL-DRIVEN : surface vivante au repos, plongée scrubbée au scroll.
+// =============================================================================
+const SURFACE_LOOP_END = 4.5; // s : fin du segment surface (juste avant le xfade à 4.54)
+const DIVE_DURATION = 9.5417; // s : durée réelle de public/dive-full.mp4 (ffprobe)
+const PIN_DISTANCE = 1.8; // multiplicateur de viewport height pour la zone pinnée
+const HANDOFF_BG = "#1c474d"; // teinte bleu-pétrole, prolonge la dernière frame (#255a62)
+
+const HANDOFF_BLOCKS = [
+  {
+    Icon: Check,
+    title: "Vérification humaine",
+    body: "Relire et corriger les sorties de l’IA est presque toujours le poste le plus lourd. On le chiffre tâche par tâche, là où les démos l’ignorent.",
+  },
+  {
+    Icon: AlertTriangle,
+    title: "Risque d’erreur",
+    body: "Une erreur qui part en production a un coût. On le valorise des deux côtés, humain comme IA, pour un arbitrage honnête plutôt qu’optimiste.",
+  },
+  {
+    Icon: Leaf,
+    title: "Empreinte",
+    body: "Énergie, eau et CO₂ par tâche, sourcés (arXiv, RTE/Ember) et affichés avec leurs fourchettes d’incertitude assumées, pas un chiffre vert décoratif.",
+  },
+];
+
+function LandingHero({
+  description,
+  setDescription,
+  runEstimate,
+  estimating,
+  estimateError,
+  usePreset,
+  manualEntry,
+  onPortfolio,
+  onReset,
+}: {
+  description: string;
+  setDescription: (v: string) => void;
+  runEstimate: () => void;
+  estimating: boolean;
+  estimateError: string | null;
+  usePreset: (preset: Scenario) => void;
+  manualEntry: () => void;
+  onPortfolio: () => void;
+  onReset: () => void;
+}) {
+  const heroRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const modeRef = useRef<"loop" | "scrub">("loop");
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    let mounted = true;
+    let cleanup = () => {};
+
+    // Boucle surface vivante : on rembobine à 0 dès qu'on dépasse SURFACE_LOOP_END,
+    // mais uniquement en mode loop (jamais pendant le scrub).
+    const onTimeUpdate = () => {
+      if (modeRef.current === "loop" && video.currentTime >= SURFACE_LOOP_END) {
+        video.currentTime = 0;
+      }
+    };
+
+    (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]);
+      if (!mounted) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const mm = gsap.matchMedia();
+
+      // DESKTOP : pin + scrub déterministe + machine loop↔scrub.
+      mm.add("(min-width: 769px) and (prefers-reduced-motion: no-preference)", () => {
+        modeRef.current = "loop";
+        video.loop = false;
+        video.currentTime = 0;
+        video.play().catch(() => {});
+        video.addEventListener("timeupdate", onTimeUpdate);
+
+        const st = ScrollTrigger.create({
+          trigger: heroRef.current,
+          start: "top top",
+          end: () => "+=" + window.innerHeight * PIN_DISTANCE,
+          pin: heroRef.current,
+          anticipatePin: 1,
+          scrub: true, // un seul lissage : on seek la vidéo directement
+          onUpdate: (self) => {
+            if (self.progress <= 0.001) {
+              if (modeRef.current !== "loop") {
+                modeRef.current = "loop";
+                if (video.currentTime >= SURFACE_LOOP_END) video.currentTime = 0;
+                video.play().catch(() => {});
+              }
+              return;
+            }
+            if (modeRef.current !== "scrub") {
+              modeRef.current = "scrub";
+              video.pause();
+            }
+            // Remap DÉTERMINISTE : 4.5s → 9.5417s, identique à chaque plongée.
+            // Le micro-saut vers 4.5s est masqué par la zone du xfade.
+            video.currentTime =
+              SURFACE_LOOP_END + self.progress * (DIVE_DURATION - SURFACE_LOOP_END);
+          },
+        });
+
+        // Titre / sous-titre / input : fade + remontée sur les 20 premiers % du pin.
+        const fade = gsap.to(contentRef.current, {
+          opacity: 0,
+          y: -40,
+          ease: "none",
+          force3D: true,
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: "top top",
+            end: () => "+=" + window.innerHeight * PIN_DISTANCE * 0.2,
+            scrub: true,
+          },
+        });
+
+        // Révélation décalée des 3 blocs du handoff.
+        const reveal = gsap.from(".handoff-block", {
+          opacity: 0,
+          y: 40,
+          duration: 0.7,
+          stagger: 0.15,
+          ease: "power3.out",
+          scrollTrigger: { trigger: ".handoff-section", start: "top 80%" },
+        });
+
+        return () => {
+          video.removeEventListener("timeupdate", onTimeUpdate);
+          fade.scrollTrigger?.kill();
+          fade.kill();
+          reveal.scrollTrigger?.kill();
+          reveal.kill();
+          st.kill();
+        };
+      });
+
+      // MOBILE + REDUCED-MOTION : boucle surface vivante, pas de scrub ni de pin.
+      // (poster en secours si l'autoplay est bloqué).
+      mm.add("(max-width: 768px), (prefers-reduced-motion: reduce)", () => {
+        modeRef.current = "loop";
+        video.loop = false;
+        video.currentTime = 0;
+        video.play().catch(() => {});
+        video.addEventListener("timeupdate", onTimeUpdate);
+        return () => video.removeEventListener("timeupdate", onTimeUpdate);
+      });
+
+      cleanup = () => mm.revert();
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
+    };
+  }, []);
+
+  return (
+    <main className="text-white" style={{ backgroundColor: HANDOFF_BG }}>
+      <section ref={heroRef} className="relative h-screen w-full overflow-hidden">
+        <video
+          ref={videoRef}
+          className="absolute inset-0 size-full object-cover"
+          muted
+          playsInline
+          preload="auto"
+          poster="/hero-poster.jpg"
+          src="/dive-full.mp4"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/35 to-slate-950/80" />
+
+        <div className="absolute inset-x-0 top-0 z-20">
+          <HeaderBar light onReset={onReset} />
+        </div>
+
+        <div
+          ref={contentRef}
+          className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center [will-change:transform,opacity]"
+        >
+          <div className="w-full max-w-2xl">
+            <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-medium text-white/85 backdrop-blur">
+              Automatiser, oui. Mais à quel prix ?
+            </span>
+            <h1 className="mx-auto mt-5 max-w-xl text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl">
+              Le vrai coût de l’automatisation
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/80 drop-shadow">
+              Décrivez un process. On vous dit s’il faut l’automatiser, avec quel modèle, et combien
+              ça coûte vraiment : vérification humaine, risque d’erreur et empreinte compris.
+            </p>
+
+            <div className="mt-9 rounded-[28px] border border-white/25 bg-white/10 p-2.5 text-left shadow-2xl shadow-black/40 backdrop-blur-xl transition-colors focus-within:border-white/45">
+              <textarea
+                className="min-h-[96px] w-full resize-none bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/50"
+                placeholder="Ex : automatiser le tri des emails entrants de l’entreprise par importance et par sujet"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runEstimate();
+                }}
+              />
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                <span className="text-[11px] text-white/60">
+                  Estimé par Claude Haiku · quelques centièmes de centime
+                </span>
+                <button
+                  type="button"
+                  onClick={runEstimate}
+                  disabled={estimating || !description.trim()}
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                >
+                  <Sparkles className="size-4" />
+                  {estimating ? "Analyse en cours…" : "Analyser"}
+                </button>
+              </div>
+            </div>
+            {estimateError && <p className="mt-3 text-sm text-rose-200">{estimateError}</p>}
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs text-white/60">Exemples :</span>
+              {Object.entries(PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => usePreset(preset)}
+                  className="rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs text-white/85 backdrop-blur transition-all hover:scale-[1.04] hover:border-white/45 hover:bg-white/20"
+                >
+                  {preset.taskName}
+                </button>
+              ))}
+            </div>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+              <button
+                type="button"
+                onClick={manualEntry}
+                className="text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
+              >
+                ou saisir les paramètres à la main
+              </button>
+              <span className="text-white/25">·</span>
+              <button
+                type="button"
+                onClick={onPortfolio}
+                className="flex items-center gap-1.5 text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
+              >
+                <Layers className="size-3.5" />
+                voir un portefeuille d’entreprise
+              </button>
+            </div>
+          </div>
+
+          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 text-[11px] text-white/55">
+            Défiler pour plonger
+            <ChevronDown className="size-4 animate-bounce" />
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="handoff-section relative px-4 py-24 sm:px-8"
+        style={{ backgroundColor: HANDOFF_BG }}
+      >
+        <div className="mx-auto max-w-5xl">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+            La partie immergée
+          </p>
+          <h2 className="mt-3 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
+            Ce qui coûte vraiment dans un projet d’automatisation est sous la surface
+          </h2>
+          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+            {HANDOFF_BLOCKS.map(({ Icon, title, body }) => (
+              <div
+                key={title}
+                className="handoff-block rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
+              >
+                <Icon className="size-5 text-cyan-200" />
+                <h3 className="mt-4 text-base font-semibold">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/70">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
