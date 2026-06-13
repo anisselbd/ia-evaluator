@@ -169,6 +169,24 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* Aurora animée façon Lovable : blobs colorés flottants. */
+@keyframes blob1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(8%, -10%) scale(1.18); }
+}
+@keyframes blob2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-10%, 8%) scale(0.88); }
+}
+@keyframes blob3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6%, 12%) scale(1.12); }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

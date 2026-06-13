@@ -23,7 +23,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Button } from "@/components/ui/button";
 import {
   MODEL_FACTORS,
   PRESETS,
@@ -86,6 +85,8 @@ const eurFine = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 3,
 });
 const num = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+
+const CARD = "rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md";
 
 function Index() {
   const [scenario, setScenario] = useState(DEFAULTS);
@@ -178,557 +179,538 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border px-4 py-4 sm:px-7 lg:px-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <button
-            type="button"
-            onClick={reset}
-            className="flex items-center gap-3 text-left"
-          >
-            <span className="flex size-9 items-center justify-center rounded-sm border border-primary/50 bg-positive-soft text-primary">
-              <ArrowLeft className="size-4 rotate-90" />
-            </span>
-            <span>
-              <span className="block text-lg font-semibold tracking-tight">Bascule</span>
-              <span className="block text-[11px] text-muted-foreground">Arbitrage IA vs humain</span>
-            </span>
-          </button>
-          <span className="hidden items-center gap-2 font-mono text-[10px] text-muted-foreground sm:flex">
-            <span className="size-1.5 rounded-full bg-positive" /> CALCUL EN TEMPS RÉEL
-          </span>
-        </div>
-      </header>
-
-      {!analyzed ? (
-        <section className="relative flex min-h-[calc(100vh-65px)] flex-col items-center justify-center px-4 py-16 text-center">
-          <div className="pointer-events-none absolute left-1/2 top-[28%] size-[460px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
-          <div className="relative z-10 w-full max-w-2xl">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-primary">
-              Automatiser, oui. Mais à quel prix ?
-            </span>
-            <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-              Le vrai coût de l’automatisation
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-balance text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Décrivez un process. On vous dit s’il faut l’automatiser, avec quel modèle, et combien
-              ça coûte vraiment : vérification humaine, risque d’erreur et empreinte compris.
-            </p>
-
-            <div className="mt-8 rounded-xl border border-border bg-panel p-2 text-left shadow-2xl">
-              <textarea
-                className="min-h-[92px] w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
-                placeholder="Ex : automatiser le tri des emails entrants de l’entreprise par importance et par sujet"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runEstimate();
-                }}
-              />
-              <div className="flex items-center justify-between gap-2 px-1 pb-1">
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  Estimé par Claude Haiku · quelques centièmes de centime
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="rounded-lg"
-                  onClick={runEstimate}
-                  disabled={estimating || !description.trim()}
-                >
-                  <Sparkles />
-                  {estimating ? "Analyse en cours…" : "Analyser"}
-                </Button>
-              </div>
-            </div>
-            {estimateError && <p className="mt-3 text-xs text-negative">{estimateError}</p>}
-
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
-              <span className="text-[11px] text-muted-foreground">Exemples :</span>
-              {Object.entries(PRESETS).map(([key, preset]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => usePreset(preset)}
-                  className="rounded-full border border-border bg-panel px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-                >
-                  {preset.taskName}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={manualEntry}
-              className="mt-6 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              ou saisir les paramètres à la main
-            </button>
-          </div>
-        </section>
-      ) : (
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-7">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={reset}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="size-3.5" /> Nouvelle analyse
-            </button>
-            {estimateMeta && (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                Estimé par {estimateMeta.model} · {eurFine.format(estimateMeta.costEur)} · confiance{" "}
-                {estimateMeta.confidence}
+    <main className="relative min-h-screen overflow-x-hidden bg-[#0a0a14] text-white">
+      <Aurora />
+      <div className="relative z-10">
+        <header className="px-5 py-5 sm:px-8">
+          <div className="mx-auto flex max-w-6xl items-center justify-between">
+            <button type="button" onClick={reset} className="flex items-center gap-2.5 text-left">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30">
+                <Sparkles className="size-4" />
               </span>
-            )}
+              <span className="text-lg font-semibold tracking-tight">Bascule</span>
+            </button>
+            <span className="hidden items-center gap-2 text-[11px] text-white/50 sm:flex">
+              <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> Calcul en temps réel
+            </span>
           </div>
+        </header>
 
-          <div className="mt-4">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {scenario.taskName || "Process à évaluer"}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {num.format(scenario.monthlyVolume)} tâches/mois · {MODEL_FACTORS[scenario.model].name} ·{" "}
-              {regionLabel(scenario.region)}
-            </p>
-          </div>
-
-          {estimateMeta && estimateMeta.assumptions.length > 0 && (
-            <div className="mt-4 rounded-sm border border-border bg-panel px-4 py-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Hypothèses retenues par l’IA
+        {!analyzed ? (
+          <section className="flex min-h-[calc(100vh-78px)] flex-col items-center justify-center px-4 py-12 text-center">
+            <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700">
+              <span className="inline-block rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/70 backdrop-blur">
+                Automatiser, oui. Mais à quel prix ?
+              </span>
+              <h1 className="mt-6 bg-gradient-to-b from-white to-white/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl">
+                Le vrai coût de
+                <br />
+                l’automatisation
+              </h1>
+              <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/60">
+                Décrivez un process. On vous dit s’il faut l’automatiser, avec quel modèle, et combien
+                ça coûte vraiment : vérification humaine, risque d’erreur et empreinte compris.
               </p>
-              <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-                {estimateMeta.assumptions.map((a, i) => (
-                  <li key={i} className="flex gap-2 text-[11px] text-muted-foreground">
-                    <span className="text-primary">·</span>
-                    {a}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
-          <div ref={verdictRef} className="mt-6 bg-background">
-            <Verdict result={result} />
-            <div className="mt-4 grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-3">
-              <Metric
-                label="Économies mensuelles"
-                value={eur.format(result.monthlySavings)}
-                source="humain moins coût IA complet"
-                positive={result.monthlySavings >= 0}
-              />
-              <Metric
-                label="Seuil de bascule"
-                value={
-                  result.breakEvenVolume === null
-                    ? "Non atteint"
-                    : `${num.format(result.breakEvenVolume)} tâches/mois`
-                }
-                source="coûts fixes ÷ marge unitaire"
-              />
-              <Metric
-                label="Part de l’API"
-                value={pct(result.apiShareOfVariableCost)}
-                source="tout le reste est humain"
-              />
-            </div>
-            <div className="mt-px grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2">
-              <CostBar label="Humain seul" value={result.humanMonthlyCost} max={maxCost} />
-              <CostBar label="IA tout compris" value={result.aiMonthlyCost} max={maxCost} positive />
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3 rounded-sm"
-            onClick={exportVerdict}
-            disabled={isExporting}
-          >
-            <Download />
-            {isExporting ? "Export en cours…" : "Exporter le verdict en image"}
-          </Button>
-
-          <Section title="Le coût caché" sub="Le prix de l’API n’est qu’une fraction du total">
-            <div className="space-y-4">
-              <Break
-                label="Tokens API"
-                value={result.costPerTask.apiTokens}
-                source="tarifs officiels USD convertis en EUR"
-                color="bg-positive"
-              />
-              <Break
-                label="Vérification humaine"
-                value={result.costPerTask.humanReview}
-                source="temps de relecture × coût chargé"
-                color="bg-warning"
-              />
-              <Break
-                label="Risque d’erreur"
-                value={result.costPerTask.errorRisk}
-                source="taux résiduel × coût d’incident"
-                color="bg-negative"
-              />
-            </div>
-          </Section>
-
-          <Section
-            title="Cloud ou souverain ?"
-            sub="Si vous automatisez, comment déployer le modèle"
-            icon={<Shield className="size-4 text-primary" />}
-          >
-            <div className="grid grid-cols-3 gap-px overflow-hidden rounded-sm border border-border bg-border">
-              <DeployCard
-                label="Humain seul"
-                value={deployments.human.monthly}
-                active={deployments.cheapest === "human"}
-              />
-              <DeployCard
-                label="IA cloud (API)"
-                value={deployments.cloud.monthly}
-                active={deployments.cheapest === "cloud"}
-              />
-              <DeployCard
-                label="IA locale souveraine"
-                value={deployments.local.monthly}
-                active={deployments.cheapest === "local"}
-                badge="Vos données restent chez vous"
-              />
-            </div>
-            <div className="mt-3 rounded-sm border border-border bg-panel px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-              {deployments.sovereigntyPremiumMonthly > 0 ? (
-                <>
-                  La souveraineté coûte{" "}
-                  <span className="font-mono text-foreground">
-                    {eur.format(deployments.sovereigntyPremiumMonthly)}/mois
-                  </span>{" "}
-                  de plus que le cloud ({pct(deployments.sovereigntyPremiumRate)}). On chiffre le prix
-                  de la confidentialité, à vous d’arbitrer.
-                </>
-              ) : (
-                <>
-                  À ce volume, le souverain est{" "}
-                  <span className="font-mono text-positive">même moins cher</span> que le cloud.
-                </>
-              )}
-              {deployments.localBreakEvenVsCloudVolume !== null &&
-                deployments.localBreakEvenVsCloudVolume > 0 && (
-                  <>
-                    {" "}
-                    Le local devient plus avantageux dès{" "}
-                    <span className="font-mono text-foreground">
-                      {num.format(deployments.localBreakEvenVsCloudVolume)} tâches/mois
-                    </span>
-                    .
-                  </>
-                )}
-            </div>
-          </Section>
-
-          <Section title="Seuil de bascule" sub="Coût mensuel selon le volume de tâches">
-            <div className="h-64 w-full" aria-label="Courbe du seuil de bascule">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
-                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="volume"
-                    stroke="var(--muted-foreground)"
-                    tickLine={false}
-                    axisLine={{ stroke: "var(--border)" }}
-                    tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                    tickFormatter={(value: number) => num.format(value)}
-                  />
-                  <YAxis
-                    width={55}
-                    stroke="var(--muted-foreground)"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                    tickFormatter={(value: number) => `${num.format(value)} €`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius)",
-                      color: "var(--popover-foreground)",
-                      fontSize: 12,
-                    }}
-                    labelFormatter={(value) => `${num.format(Number(value))} tâches/mois`}
-                    formatter={(value, name) => [eur.format(Number(value)), name]}
-                  />
-                  <Legend
-                    iconType="plainline"
-                    wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)" }}
-                  />
-                  {result.breakEvenVolume !== null && (
-                    <ReferenceArea
-                      x1={result.breakEvenVolume}
-                      x2={curve.at(-1)?.volume}
-                      fill="var(--positive)"
-                      fillOpacity={0.08}
-                    />
-                  )}
-                  {result.breakEvenVolume !== null && (
-                    <ReferenceLine
-                      x={result.breakEvenVolume}
-                      stroke="var(--positive)"
-                      strokeDasharray="5 5"
-                      label={{
-                        value: "Bascule",
-                        position: "insideTopRight",
-                        fill: "var(--positive)",
-                        fontSize: 10,
-                      }}
-                    />
-                  )}
-                  <Line
-                    type="monotone"
-                    dataKey="humanCost"
-                    name="Coût humain"
-                    stroke="var(--muted-foreground)"
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 3 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="aiCost"
-                    name="Coût IA"
-                    stroke="var(--positive)"
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Section>
-
-          <Section title="Empreinte mensuelle" icon={<Leaf className="size-4 text-primary" />}>
-            <div className="grid grid-cols-3 gap-3">
-              <Foot
-                value={`${num.format(result.footprint.energyWh)} Wh`}
-                label="Énergie"
-                source="arXiv 2505.09598"
-              />
-              <Foot
-                value={`${num.format(result.footprint.waterMl)} mL`}
-                label="Eau"
-                source={`${scenario.waterScope === "life-cycle" ? "Cycle de vie" : "On-site"} · ${scenario.waterScope === "life-cycle" ? "45" : "1,7"} mL/Wh`}
-                highlight
-              />
-              <Foot
-                value={`${num.format(result.footprint.carbonGCo2e)} g`}
-                label="CO₂eq"
-                source="mix électrique régional"
-              />
-            </div>
-            <div className="mt-3 flex items-start gap-2 rounded-sm border border-border bg-panel px-3 py-2">
-              <span className="mt-0.5 text-[10px] text-muted-foreground">Fourchette eau :</span>
-              <span className="font-mono text-[10px]">
-                {num.format(result.footprint.waterMlOnSite)} à{" "}
-                {num.format(result.footprint.waterMlLifeCycle)} mL
-              </span>
-              <span className="ml-auto max-w-[60%] text-[10px] leading-tight text-muted-foreground">
-                L’écart reflète le périmètre comptabilisé : refroidissement direct du datacenter (on-site)
-                versus fabrication des puces et cycle de vie complet (life-cycle). Les études varient
-                d’un facteur 10 à 50. On affiche la fourchette plutôt qu’un faux chiffre précis.
-              </span>
-            </div>
-          </Section>
-
-          <Section
-            title="Le bon modèle pour cette tâche"
-            sub="Classés par coût mensuel total croissant"
-          >
-            <div className="overflow-x-auto border border-border">
-              <table className="w-full min-w-[680px] text-left">
-                <thead className="bg-panel-raised text-[10px] uppercase tracking-widest text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3">Rang / modèle</th>
-                    <th className="px-5 py-3">Fournisseur</th>
-                    <th className="px-5 py-3 text-right">Coût mensuel IA</th>
-                    <th className="px-5 py-3 text-right">Économies</th>
-                    <th className="px-5 py-3 text-right">Énergie</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {ranking.map((r, i) => (
-                    <tr key={r.model} className="hover:bg-accent/40">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <span className="text-sm font-medium">{r.modelName}</span>
-                          {i === 0 && (
-                            <span className="bg-positive-soft px-1.5 py-0.5 text-[9px] uppercase text-positive">
-                              Optimal coût
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-xs text-muted-foreground">{r.provider}</td>
-                      <td className="px-5 py-4 text-right font-mono text-sm">
-                        {eur.format(r.aiMonthlyCost)}
-                      </td>
-                      <td
-                        className={`px-5 py-4 text-right font-mono text-sm ${r.monthlySavings >= 0 ? "text-positive" : "text-negative"}`}
-                      >
-                        {eur.format(r.monthlySavings)}
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-sm text-muted-foreground">
-                        {num.format(r.footprint.energyWh)} Wh
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-              Tarifs officiels mi-2026 · énergie arXiv 2505.09598 · à revalider le jour J
-            </p>
-          </Section>
-
-          <div className="mt-8 rounded-sm border border-border">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((o) => !o)}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
-            >
-              Ajuster les paramètres
-              <ChevronDown
-                className={`size-4 text-muted-foreground transition-transform ${advancedOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {advancedOpen && (
-              <div className="border-t border-border px-4 py-5">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Field label="Nom de la tâche" wide>
-                    <input
-                      className="field"
-                      value={scenario.taskName}
-                      onChange={(e) => setScenario({ ...scenario, taskName: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Volume par mois" suffix="tâches">
-                    <N value={scenario.monthlyVolume} change={(v) => setNum("monthlyVolume", v)} />
-                  </Field>
-                  <Field label="Temps humain / tâche" suffix="min">
-                    <N
-                      value={scenario.humanMinutesPerTask}
-                      change={(v) => setNum("humanMinutesPerTask", v)}
-                    />
-                  </Field>
-                  <Field label="Coût horaire chargé" suffix="EUR">
-                    <N
-                      value={scenario.loadedHourlyCostEur}
-                      change={(v) => setNum("loadedHourlyCostEur", v)}
-                    />
-                  </Field>
-                  <Field label="Modèle IA">
-                    <select
-                      className="field"
-                      value={scenario.model}
-                      onChange={(e) =>
-                        setScenario({ ...scenario, model: e.target.value as ModelId })
-                      }
-                    >
-                      {Object.values(MODEL_FACTORS).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Tokens d’entrée / tâche" suffix="tok.">
-                    <N
-                      value={scenario.inputTokensPerTask}
-                      change={(v) => setNum("inputTokensPerTask", v)}
-                    />
-                  </Field>
-                  <Field label="Tokens de sortie / tâche" suffix="tok.">
-                    <N
-                      value={scenario.outputTokensPerTask}
-                      change={(v) => setNum("outputTokensPerTask", v)}
-                    />
-                  </Field>
-                  <Range
-                    label="Taux de vérification humaine"
-                    value={scenario.humanReviewRate * 100}
-                    max={100}
-                    change={(v) => setScenario({ ...scenario, humanReviewRate: v / 100 })}
-                  />
-                  <Field label="Minutes / vérification" suffix="min">
-                    <N value={scenario.reviewMinutes} change={(v) => setNum("reviewMinutes", v)} />
-                  </Field>
-                  <Range
-                    label="Taux d’erreur résiduel"
-                    value={scenario.residualErrorRate * 100}
-                    max={10}
-                    step={0.5}
-                    change={(v) => setScenario({ ...scenario, residualErrorRate: v / 100 })}
-                  />
-                  <Field label="Coût d’une erreur" suffix="EUR">
-                    <N value={scenario.errorCostEur} change={(v) => setNum("errorCostEur", v)} />
-                  </Field>
-                  <Field label="Coût de mise en place" suffix="EUR">
-                    <N value={scenario.setupCostEur} change={(v) => setNum("setupCostEur", v)} />
-                  </Field>
-                  <Field label="Amortissement" suffix="mois">
-                    <N
-                      value={scenario.amortizationMonths}
-                      min={1}
-                      change={(v) => setNum("amortizationMonths", v)}
-                    />
-                  </Field>
-                  <Field label="Abonnement mensuel" suffix="EUR">
-                    <N
-                      value={scenario.monthlySubscriptionEur}
-                      change={(v) => setNum("monthlySubscriptionEur", v)}
-                    />
-                  </Field>
-                  <Field label="Région">
-                    <select
-                      className="field"
-                      value={scenario.region}
-                      onChange={(e) =>
-                        setScenario({ ...scenario, region: e.target.value as Region })
-                      }
-                    >
-                      <option value="france">France</option>
-                      <option value="eu">Union européenne</option>
-                      <option value="usa">États-Unis</option>
-                      <option value="world">Monde</option>
-                    </select>
-                  </Field>
-                  <Field label="Périmètre eau">
-                    <div className="flex rounded-sm border border-border bg-panel">
-                      {(["on-site", "life-cycle"] as WaterScope[]).map((scope) => (
-                        <button
-                          key={scope}
-                          type="button"
-                          onClick={() => setScenario({ ...scenario, waterScope: scope })}
-                          className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
-                            scenario.waterScope === scope
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          {scope === "on-site" ? "On-site" : "Cycle de vie"}
-                        </button>
-                      ))}
-                    </div>
-                  </Field>
+              <div className="mt-9 rounded-[28px] border border-white/15 bg-white/[0.06] p-2.5 text-left shadow-2xl shadow-black/40 backdrop-blur-xl transition-colors focus-within:border-white/30">
+                <textarea
+                  className="min-h-[96px] w-full resize-none bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/40"
+                  placeholder="Ex : automatiser le tri des emails entrants de l’entreprise par importance et par sujet"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runEstimate();
+                  }}
+                />
+                <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                  <span className="text-[11px] text-white/40">
+                    Estimé par Claude Haiku · quelques centièmes de centime
+                  </span>
+                  <button
+                    type="button"
+                    onClick={runEstimate}
+                    disabled={estimating || !description.trim()}
+                    className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-fuchsia-500/30 transition-all hover:scale-[1.03] hover:shadow-fuchsia-500/50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                  >
+                    <Sparkles className="size-4" />
+                    {estimating ? "Analyse en cours…" : "Analyser"}
+                  </button>
                 </div>
               </div>
+              {estimateError && <p className="mt-3 text-sm text-rose-300">{estimateError}</p>}
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-xs text-white/40">Exemples :</span>
+                {Object.entries(PRESETS).map(([key, preset]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => usePreset(preset)}
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70 backdrop-blur transition-all hover:scale-[1.04] hover:border-white/30 hover:text-white"
+                  >
+                    {preset.taskName}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={manualEntry}
+                className="mt-7 text-xs text-white/40 underline-offset-4 transition-colors hover:text-white/80 hover:underline"
+              >
+                ou saisir les paramètres à la main
+              </button>
+            </div>
+          </section>
+        ) : (
+          <div className="mx-auto max-w-5xl px-4 pb-16 pt-2 sm:px-7">
+            <div className="flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-500">
+              <button
+                type="button"
+                onClick={reset}
+                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70 transition-colors hover:border-white/30 hover:text-white"
+              >
+                <ArrowLeft className="size-3.5" /> Nouvelle analyse
+              </button>
+              {estimateMeta && (
+                <span className="text-[11px] text-white/40">
+                  Estimé par {estimateMeta.model} · {eurFine.format(estimateMeta.costEur)} · confiance{" "}
+                  {estimateMeta.confidence}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {scenario.taskName || "Process à évaluer"}
+              </h1>
+              <p className="mt-1.5 text-sm text-white/50">
+                {num.format(scenario.monthlyVolume)} tâches/mois · {MODEL_FACTORS[scenario.model].name} ·{" "}
+                {regionLabel(scenario.region)}
+              </p>
+            </div>
+
+            {estimateMeta && estimateMeta.assumptions.length > 0 && (
+              <div className={`mt-5 px-5 py-4 ${CARD} animate-in fade-in duration-500`}>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">
+                  Hypothèses retenues par l’IA
+                </p>
+                <ul className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
+                  {estimateMeta.assumptions.map((a, i) => (
+                    <li key={i} className="flex gap-2 text-[13px] text-white/70">
+                      <span className="text-fuchsia-300">·</span>
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
+
+            <div ref={verdictRef} className="mt-6 rounded-3xl bg-[#0a0a14]/60 p-1">
+              <Verdict result={result} />
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <Metric
+                  label="Économies mensuelles"
+                  value={eur.format(result.monthlySavings)}
+                  source="humain moins coût IA complet"
+                  positive={result.monthlySavings >= 0}
+                />
+                <Metric
+                  label="Seuil de bascule"
+                  value={
+                    result.breakEvenVolume === null
+                      ? "Non atteint"
+                      : `${num.format(result.breakEvenVolume)} tâches/mois`
+                  }
+                  source="coûts fixes ÷ marge unitaire"
+                />
+                <Metric
+                  label="Part de l’API"
+                  value={pct(result.apiShareOfVariableCost)}
+                  source="tout le reste est humain"
+                />
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <CostBar label="Humain seul" value={result.humanMonthlyCost} max={maxCost} />
+                <CostBar label="IA tout compris" value={result.aiMonthlyCost} max={maxCost} positive />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={exportVerdict}
+              disabled={isExporting}
+              className="mt-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70 transition-colors hover:border-white/30 hover:text-white disabled:opacity-50"
+            >
+              <Download className="size-3.5" />
+              {isExporting ? "Export en cours…" : "Exporter le verdict en image"}
+            </button>
+
+            <Section title="Le coût caché" sub="Le prix de l’API n’est qu’une fraction du total">
+              <div className={`space-y-4 px-5 py-5 ${CARD}`}>
+                <Break
+                  label="Tokens API"
+                  value={result.costPerTask.apiTokens}
+                  source="tarifs officiels USD convertis en EUR"
+                  color="bg-emerald-400"
+                />
+                <Break
+                  label="Vérification humaine"
+                  value={result.costPerTask.humanReview}
+                  source="temps de relecture × coût chargé"
+                  color="bg-amber-400"
+                />
+                <Break
+                  label="Risque d’erreur"
+                  value={result.costPerTask.errorRisk}
+                  source="taux résiduel × coût d’incident"
+                  color="bg-rose-400"
+                />
+              </div>
+            </Section>
+
+            <Section
+              title="Cloud ou souverain ?"
+              sub="Si vous automatisez, comment déployer le modèle"
+              icon={<Shield className="size-4 text-violet-300" />}
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <DeployCard
+                  label="Humain seul"
+                  value={deployments.human.monthly}
+                  active={deployments.cheapest === "human"}
+                />
+                <DeployCard
+                  label="IA cloud (API)"
+                  value={deployments.cloud.monthly}
+                  active={deployments.cheapest === "cloud"}
+                />
+                <DeployCard
+                  label="IA locale souveraine"
+                  value={deployments.local.monthly}
+                  active={deployments.cheapest === "local"}
+                  badge="Vos données restent chez vous"
+                />
+              </div>
+              <div className={`mt-3 px-4 py-3 text-[13px] leading-relaxed text-white/60 ${CARD}`}>
+                {deployments.sovereigntyPremiumMonthly > 0 ? (
+                  <>
+                    La souveraineté coûte{" "}
+                    <span className="font-medium text-white">
+                      {eur.format(deployments.sovereigntyPremiumMonthly)}/mois
+                    </span>{" "}
+                    de plus que le cloud ({pct(deployments.sovereigntyPremiumRate)}). On chiffre le prix
+                    de la confidentialité, à vous d’arbitrer.
+                  </>
+                ) : (
+                  <>
+                    À ce volume, le souverain est{" "}
+                    <span className="font-medium text-emerald-300">même moins cher</span> que le cloud.
+                  </>
+                )}
+                {deployments.localBreakEvenVsCloudVolume !== null &&
+                  deployments.localBreakEvenVsCloudVolume > 0 && (
+                    <>
+                      {" "}
+                      Le local devient plus avantageux dès{" "}
+                      <span className="font-medium text-white">
+                        {num.format(deployments.localBreakEvenVsCloudVolume)} tâches/mois
+                      </span>
+                      .
+                    </>
+                  )}
+              </div>
+            </Section>
+
+            <Section title="Seuil de bascule" sub="Coût mensuel selon le volume de tâches">
+              <div className={`h-72 w-full px-3 py-4 ${CARD}`} aria-label="Courbe du seuil de bascule">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="volume"
+                      stroke="rgba(255,255,255,0.4)"
+                      tickLine={false}
+                      axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value: number) => num.format(value)}
+                    />
+                    <YAxis
+                      width={55}
+                      stroke="rgba(255,255,255,0.4)"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value: number) => `${num.format(value)} €`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "rgba(15,15,25,0.92)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 12,
+                        color: "#fff",
+                        fontSize: 12,
+                      }}
+                      labelFormatter={(value) => `${num.format(Number(value))} tâches/mois`}
+                      formatter={(value, name) => [eur.format(Number(value)), name]}
+                    />
+                    <Legend iconType="plainline" wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }} />
+                    {result.breakEvenVolume !== null && (
+                      <ReferenceArea
+                        x1={result.breakEvenVolume}
+                        x2={curve.at(-1)?.volume}
+                        fill="#34d399"
+                        fillOpacity={0.1}
+                      />
+                    )}
+                    {result.breakEvenVolume !== null && (
+                      <ReferenceLine
+                        x={result.breakEvenVolume}
+                        stroke="#34d399"
+                        strokeDasharray="5 5"
+                        label={{ value: "Bascule", position: "insideTopRight", fill: "#34d399", fontSize: 10 }}
+                      />
+                    )}
+                    <Line
+                      type="monotone"
+                      dataKey="humanCost"
+                      name="Coût humain"
+                      stroke="#94a3b8"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="aiCost"
+                      name="Coût IA"
+                      stroke="#c084fc"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Section>
+
+            <Section title="Empreinte mensuelle" icon={<Leaf className="size-4 text-emerald-300" />}>
+              <div className={`px-5 py-5 ${CARD}`}>
+                <div className="grid grid-cols-3 gap-4">
+                  <Foot
+                    value={`${num.format(result.footprint.energyWh)} Wh`}
+                    label="Énergie"
+                    source="arXiv 2505.09598"
+                  />
+                  <Foot
+                    value={`${num.format(result.footprint.waterMl)} mL`}
+                    label="Eau"
+                    source={`${scenario.waterScope === "life-cycle" ? "Cycle de vie" : "On-site"} · ${scenario.waterScope === "life-cycle" ? "45" : "1,7"} mL/Wh`}
+                    highlight
+                  />
+                  <Foot
+                    value={`${num.format(result.footprint.carbonGCo2e)} g`}
+                    label="CO₂eq"
+                    source="mix électrique régional"
+                  />
+                </div>
+                <div className="mt-4 flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="mt-0.5 text-[10px] text-white/40">Fourchette eau :</span>
+                  <span className="text-[10px] text-white/80">
+                    {num.format(result.footprint.waterMlOnSite)} à{" "}
+                    {num.format(result.footprint.waterMlLifeCycle)} mL
+                  </span>
+                  <span className="ml-auto max-w-[62%] text-[10px] leading-tight text-white/40">
+                    L’écart reflète le périmètre : refroidissement direct (on-site) versus cycle de vie
+                    complet (fabrication des puces, infrastructure). On affiche la fourchette plutôt
+                    qu’un faux chiffre précis.
+                  </span>
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Le bon modèle pour cette tâche" sub="Classés par coût mensuel total croissant">
+              <div className={`overflow-hidden ${CARD}`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-left">
+                    <thead className="text-[10px] uppercase tracking-widest text-white/40">
+                      <tr className="border-b border-white/10">
+                        <th className="px-5 py-3.5">Rang / modèle</th>
+                        <th className="px-5 py-3.5">Fournisseur</th>
+                        <th className="px-5 py-3.5 text-right">Coût mensuel IA</th>
+                        <th className="px-5 py-3.5 text-right">Économies</th>
+                        <th className="px-5 py-3.5 text-right">Énergie</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ranking.map((r, i) => (
+                        <tr key={r.model} className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-white/40">{String(i + 1).padStart(2, "0")}</span>
+                              <span className="text-sm font-medium">{r.modelName}</span>
+                              {i === 0 && (
+                                <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[9px] uppercase text-emerald-300">
+                                  Optimal coût
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-xs text-white/50">{r.provider}</td>
+                          <td className="px-5 py-4 text-right text-sm">{eur.format(r.aiMonthlyCost)}</td>
+                          <td
+                            className={`px-5 py-4 text-right text-sm ${r.monthlySavings >= 0 ? "text-emerald-300" : "text-rose-300"}`}
+                          >
+                            {eur.format(r.monthlySavings)}
+                          </td>
+                          <td className="px-5 py-4 text-right text-sm text-white/50">
+                            {num.format(r.footprint.energyWh)} Wh
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] uppercase tracking-wider text-white/30">
+                Tarifs officiels mi-2026 · énergie arXiv 2505.09598 · à revalider le jour J
+              </p>
+            </Section>
+
+            <div className={`mt-8 overflow-hidden ${CARD}`}>
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((o) => !o)}
+                className="flex w-full items-center justify-between px-5 py-4 text-sm font-medium transition-colors hover:bg-white/[0.03]"
+              >
+                Ajuster les paramètres
+                <ChevronDown className={`size-4 text-white/40 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+              </button>
+              {advancedOpen && (
+                <div className="border-t border-white/10 px-5 py-5">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Field label="Nom de la tâche" wide>
+                      <input
+                        className="field"
+                        value={scenario.taskName}
+                        onChange={(e) => setScenario({ ...scenario, taskName: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Volume par mois" suffix="tâches">
+                      <N value={scenario.monthlyVolume} change={(v) => setNum("monthlyVolume", v)} />
+                    </Field>
+                    <Field label="Temps humain / tâche" suffix="min">
+                      <N value={scenario.humanMinutesPerTask} change={(v) => setNum("humanMinutesPerTask", v)} />
+                    </Field>
+                    <Field label="Coût horaire chargé" suffix="EUR">
+                      <N value={scenario.loadedHourlyCostEur} change={(v) => setNum("loadedHourlyCostEur", v)} />
+                    </Field>
+                    <Field label="Modèle IA">
+                      <select
+                        className="field"
+                        value={scenario.model}
+                        onChange={(e) => setScenario({ ...scenario, model: e.target.value as ModelId })}
+                      >
+                        {Object.values(MODEL_FACTORS).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Tokens d’entrée / tâche" suffix="tok.">
+                      <N value={scenario.inputTokensPerTask} change={(v) => setNum("inputTokensPerTask", v)} />
+                    </Field>
+                    <Field label="Tokens de sortie / tâche" suffix="tok.">
+                      <N value={scenario.outputTokensPerTask} change={(v) => setNum("outputTokensPerTask", v)} />
+                    </Field>
+                    <Range
+                      label="Taux de vérification humaine"
+                      value={scenario.humanReviewRate * 100}
+                      max={100}
+                      change={(v) => setScenario({ ...scenario, humanReviewRate: v / 100 })}
+                    />
+                    <Field label="Minutes / vérification" suffix="min">
+                      <N value={scenario.reviewMinutes} change={(v) => setNum("reviewMinutes", v)} />
+                    </Field>
+                    <Range
+                      label="Taux d’erreur résiduel"
+                      value={scenario.residualErrorRate * 100}
+                      max={10}
+                      step={0.5}
+                      change={(v) => setScenario({ ...scenario, residualErrorRate: v / 100 })}
+                    />
+                    <Field label="Coût d’une erreur" suffix="EUR">
+                      <N value={scenario.errorCostEur} change={(v) => setNum("errorCostEur", v)} />
+                    </Field>
+                    <Field label="Coût de mise en place" suffix="EUR">
+                      <N value={scenario.setupCostEur} change={(v) => setNum("setupCostEur", v)} />
+                    </Field>
+                    <Field label="Amortissement" suffix="mois">
+                      <N value={scenario.amortizationMonths} min={1} change={(v) => setNum("amortizationMonths", v)} />
+                    </Field>
+                    <Field label="Abonnement mensuel" suffix="EUR">
+                      <N value={scenario.monthlySubscriptionEur} change={(v) => setNum("monthlySubscriptionEur", v)} />
+                    </Field>
+                    <Field label="Région">
+                      <select
+                        className="field"
+                        value={scenario.region}
+                        onChange={(e) => setScenario({ ...scenario, region: e.target.value as Region })}
+                      >
+                        <option value="france">France</option>
+                        <option value="eu">Union européenne</option>
+                        <option value="usa">États-Unis</option>
+                        <option value="world">Monde</option>
+                      </select>
+                    </Field>
+                    <Field label="Périmètre eau">
+                      <div className="flex overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                        {(["on-site", "life-cycle"] as WaterScope[]).map((scope) => (
+                          <button
+                            key={scope}
+                            type="button"
+                            onClick={() => setScenario({ ...scenario, waterScope: scope })}
+                            className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
+                              scenario.waterScope === scope
+                                ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+                                : "text-white/50 hover:text-white"
+                            }`}
+                          >
+                            {scope === "on-site" ? "On-site" : "Cycle de vie"}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
+  );
+}
+
+function Aurora() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div
+        className="absolute -left-[10%] -top-[10%] size-[48vw] rounded-full bg-indigo-600/40 blur-[120px]"
+        style={{ animation: "blob1 18s ease-in-out infinite" }}
+      />
+      <div
+        className="absolute -right-[5%] top-[2%] size-[42vw] rounded-full bg-fuchsia-600/30 blur-[130px]"
+        style={{ animation: "blob2 23s ease-in-out infinite" }}
+      />
+      <div
+        className="absolute bottom-[-18%] left-[18%] size-[46vw] rounded-full bg-rose-500/25 blur-[140px]"
+        style={{ animation: "blob3 21s ease-in-out infinite" }}
+      />
+      <div
+        className="absolute bottom-0 right-[12%] size-[34vw] rounded-full bg-amber-400/20 blur-[130px]"
+        style={{ animation: "blob1 27s ease-in-out infinite" }}
+      />
+    </div>
   );
 }
 
@@ -754,12 +736,12 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="mt-8 border-t border-border pt-6">
+    <section className="mt-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold text-white/90">{title}</h2>
       </div>
-      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+      {sub && <p className="mt-1 text-xs text-white/45">{sub}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -777,11 +759,11 @@ function Field({
 }) {
   return (
     <label className={wide ? "sm:col-span-2 lg:col-span-3" : ""}>
-      <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-[11px] font-medium text-white/50">{label}</span>
       <div className="relative">
         {children}
         {suffix && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground">
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white/40">
             {suffix}
           </span>
         )}
@@ -800,7 +782,7 @@ function N({
 }) {
   return (
     <input
-      className="field pr-14 font-mono"
+      className="field pr-14"
       type="number"
       min={min}
       value={value}
@@ -823,13 +805,13 @@ function Range({
 }) {
   return (
     <label>
-      <span className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
+      <span className="mb-1.5 flex justify-between text-[11px] text-white/50">
         <span>{label}</span>
-        <span className="font-mono text-foreground">{value}%</span>
+        <span className="text-white">{value}%</span>
       </span>
-      <div className="flex h-10 items-center rounded-sm border border-input bg-panel-raised px-3">
+      <div className="flex h-10 items-center rounded-lg border border-white/10 bg-white/5 px-3">
         <input
-          className="w-full"
+          className="w-full accent-fuchsia-500"
           type="range"
           min={0}
           max={max}
@@ -844,10 +826,10 @@ function Range({
 function Verdict({ result }: { result: ReturnType<typeof evaluate> }) {
   const style =
     result.recommendation === "AUTOMATISER"
-      ? "border-positive/40 bg-positive-soft text-positive"
+      ? "border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 to-teal-500/5 text-emerald-300"
       : result.recommendation === "HYBRIDE"
-        ? "border-warning/40 bg-warning-soft text-warning"
-        : "border-negative/40 bg-negative-soft text-negative";
+        ? "border-amber-400/30 bg-gradient-to-br from-amber-500/20 to-orange-500/5 text-amber-300"
+        : "border-rose-400/30 bg-gradient-to-br from-rose-500/20 to-pink-500/5 text-rose-300";
   const Icon =
     result.recommendation === "AUTOMATISER"
       ? Check
@@ -855,14 +837,14 @@ function Verdict({ result }: { result: ReturnType<typeof evaluate> }) {
         ? Minus
         : AlertTriangle;
   return (
-    <div className={`border p-5 sm:p-6 transition-colors duration-500 ease-out ${style}`}>
+    <div
+      className={`rounded-3xl border p-6 shadow-2xl shadow-black/30 backdrop-blur-md transition-colors duration-500 ${style}`}
+    >
       <div className="flex gap-4">
-        <Icon className="mt-1 size-5 shrink-0 transition-colors duration-500 ease-out" />
+        <Icon className="mt-1 size-6 shrink-0" />
         <div>
-          <p className="font-mono text-2xl font-semibold transition-colors duration-500 ease-out sm:text-3xl">
-            {result.recommendation}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-foreground/80">{result.explanation}</p>
+          <p className="text-3xl font-bold tracking-tight">{result.recommendation}</p>
+          <p className="mt-2 text-sm leading-relaxed text-white/75">{result.explanation}</p>
         </div>
       </div>
     </div>
@@ -880,16 +862,16 @@ function CostBar({
   positive?: boolean;
 }) {
   return (
-    <div className="bg-panel p-5">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-xl">{eur.format(value)}</p>
-      <div className="mt-5 flex h-12 items-end bg-muted/30">
+    <div className={`p-5 ${CARD}`}>
+      <p className="text-xs text-white/50">{label}</p>
+      <p className="mt-1 text-2xl font-semibold">{eur.format(value)}</p>
+      <div className="mt-4 flex h-12 items-end overflow-hidden rounded-lg bg-white/5">
         <div
-          className={`w-full ${positive ? "bg-positive" : "bg-foreground/35"}`}
+          className={`w-full rounded-t-lg transition-all duration-700 ease-out ${positive ? "bg-gradient-to-t from-violet-500 to-fuchsia-400" : "bg-white/25"}`}
           style={{ height: `${Math.max(8, (value / max) * 100)}%` }}
         />
       </div>
-      <p className="mt-2 text-[9px] text-muted-foreground">
+      <p className="mt-2 text-[9px] text-white/40">
         {positive ? "API + contrôle + risque + fixe" : "coût horaire chargé × temps"}
       </p>
     </div>
@@ -909,16 +891,16 @@ function Break({
   return (
     <div>
       <div className="flex justify-between">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="font-mono text-sm">{eurFine.format(value)}</span>
+        <span className="text-xs text-white/60">{label}</span>
+        <span className="text-sm">{eurFine.format(value)}</span>
       </div>
-      <div className="mt-2 h-1 bg-muted">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
-          className={`h-full ${color}`}
+          className={`h-full rounded-full transition-all duration-700 ${color}`}
           style={{ width: `${Math.max(2, Math.min(100, value * 40))}%` }}
         />
       </div>
-      <p className="mt-1.5 text-[9px] text-muted-foreground">{source}</p>
+      <p className="mt-1.5 text-[9px] text-white/35">{source}</p>
     </div>
   );
 }
@@ -934,10 +916,12 @@ function Metric({
   positive?: boolean;
 }) {
   return (
-    <div className="bg-panel p-4">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`mt-2 font-mono text-lg ${positive ? "text-positive" : ""}`}>{value}</p>
-      <p className="mt-1 text-[9px] text-muted-foreground">{source}</p>
+    <div className={`p-5 ${CARD}`}>
+      <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
+      <p className={`mt-2 text-xl font-semibold ${positive ? "text-emerald-300" : "text-white"}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-[9px] text-white/35">{source}</p>
     </div>
   );
 }
@@ -953,10 +937,10 @@ function Foot({
   highlight?: boolean;
 }) {
   return (
-    <div className={`border-l border-border pl-3 ${highlight ? "border-l-primary" : ""}`}>
-      <p className="font-mono text-sm sm:text-base">{value}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-[8px] text-muted-foreground/70">{source}</p>
+    <div className={`border-l-2 pl-3 ${highlight ? "border-emerald-400/60" : "border-white/15"}`}>
+      <p className="text-base font-semibold">{value}</p>
+      <p className="mt-1 text-[10px] text-white/50">{label}</p>
+      <p className="mt-1 text-[8px] text-white/30">{source}</p>
     </div>
   );
 }
@@ -972,17 +956,19 @@ function DeployCard({
   badge?: string;
 }) {
   return (
-    <div className={`bg-panel p-4 ${active ? "ring-1 ring-inset ring-primary" : ""}`}>
+    <div
+      className={`p-5 transition-all ${CARD} ${active ? "ring-2 ring-violet-400/60" : "hover:border-white/20"}`}
+    >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className="text-[11px] text-white/50">{label}</p>
         {active && (
-          <span className="shrink-0 rounded-sm bg-positive-soft px-1.5 py-0.5 text-[9px] uppercase text-positive">
+          <span className="shrink-0 rounded-full bg-violet-400/15 px-2 py-0.5 text-[9px] uppercase text-violet-200">
             Moins cher
           </span>
         )}
       </div>
-      <p className="mt-2 font-mono text-lg">{eur.format(value)}</p>
-      {badge && <p className="mt-2 text-[9px] leading-tight text-primary">{badge}</p>}
+      <p className="mt-2 text-xl font-semibold">{eur.format(value)}</p>
+      {badge && <p className="mt-2 text-[10px] leading-tight text-violet-200/80">{badge}</p>}
     </div>
   );
 }
