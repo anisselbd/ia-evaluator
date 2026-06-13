@@ -96,6 +96,8 @@ export interface CostBreakdownPerTask {
 export interface Footprint {
   energyWh: number;
   waterMl: number;
+  waterMlOnSite: number;
+  waterMlLifeCycle: number;
   carbonGCo2e: number;
 }
 
