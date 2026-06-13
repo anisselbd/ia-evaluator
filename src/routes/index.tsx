@@ -6,6 +6,8 @@ import {
   Check,
   ChevronDown,
   Download,
+  Gauge,
+  Layers,
   Leaf,
   Minus,
   Shield,
@@ -29,8 +31,12 @@ import {
   breakEvenCurve,
   compareDeployments,
   evaluate,
+  evaluatePortfolio,
+  rankBySobriety,
   rankModels,
   type ModelId,
+  type PortfolioResult,
+  type Recommendation,
   type Region,
   type Scenario,
   type WaterScope,
@@ -91,6 +97,7 @@ const CARD = "rounded-2xl border border-slate-200 bg-white shadow-sm";
 function Index() {
   const [scenario, setScenario] = useState(DEFAULTS);
   const [analyzed, setAnalyzed] = useState(false);
+  const [portfolio, setPortfolio] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [description, setDescription] = useState("");
@@ -107,6 +114,8 @@ function Index() {
   const curve = useMemo(() => breakEvenCurve(scenario), [scenario]);
   const ranking = useMemo(() => rankModels(scenario), [scenario]);
   const deployments = useMemo(() => compareDeployments(scenario), [scenario]);
+  const sobriety = useMemo(() => rankBySobriety(scenario), [scenario]);
+  const portfolioData = useMemo(() => evaluatePortfolio(Object.values(PRESETS)), []);
   const setNum = (key: keyof Scenario, value: string) =>
     setScenario((s) => ({ ...s, [key]: Number(value) || 0 }));
   const maxCost = Math.max(result.humanMonthlyCost, result.aiMonthlyCost, 1);
@@ -149,6 +158,7 @@ function Index() {
   };
   const reset = () => {
     setAnalyzed(false);
+    setPortfolio(false);
     setAdvancedOpen(false);
     setDescription("");
     setEstimateMeta(null);
@@ -177,6 +187,10 @@ function Index() {
       setIsExporting(false);
     }
   };
+
+  if (portfolio) {
+    return <PortfolioView data={portfolioData} onReset={reset} />;
+  }
 
   if (!analyzed) {
     return (
@@ -246,13 +260,24 @@ function Index() {
                   </button>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={manualEntry}
-                className="mt-7 text-xs text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
-              >
-                ou saisir les paramètres à la main
-              </button>
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+                <button
+                  type="button"
+                  onClick={manualEntry}
+                  className="text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
+                >
+                  ou saisir les paramètres à la main
+                </button>
+                <span className="text-white/25">·</span>
+                <button
+                  type="button"
+                  onClick={() => setPortfolio(true)}
+                  className="flex items-center gap-1.5 text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
+                >
+                  <Layers className="size-3.5" />
+                  voir un portefeuille d’entreprise
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -582,6 +607,47 @@ function Index() {
             </p>
           </Section>
 
+          <Section
+            title="Sobriété environnementale"
+            sub="Quel modèle consomme le moins pour le même travail"
+            icon={<Gauge className="size-4 text-emerald-500" />}
+          >
+            <div className={`divide-y divide-slate-100 ${CARD}`}>
+              {sobriety.map((s, i) => (
+                <div key={s.model} className="flex items-center gap-4 px-5 py-3.5">
+                  <span className="w-5 shrink-0 text-xs text-slate-400">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="w-[150px] shrink-0">
+                    <p className="text-sm font-medium">{s.modelName}</p>
+                    <p className="text-[10px] text-slate-400">{s.provider}</p>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-700"
+                        style={{ width: `${s.sobrietyScore}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-9 shrink-0 text-right text-sm font-semibold text-emerald-600">
+                    {s.sobrietyScore}
+                  </span>
+                  <span className="hidden w-24 shrink-0 text-right text-xs text-slate-500 sm:block">
+                    {num.format(s.energyWhMonthly)} Wh
+                  </span>
+                  <span className="hidden w-20 shrink-0 text-right text-xs text-slate-500 sm:block">
+                    {num.format(s.carbonGCo2eMonthly)} g
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] uppercase tracking-wider text-slate-400">
+              Score 100 = le plus sobre · énergie et CO₂eq mensuels pour ce volume · mix{" "}
+              {regionLabel(scenario.region)}
+            </p>
+          </Section>
+
           <div className={`mt-8 overflow-hidden ${CARD}`}>
             <button
               type="button"
@@ -691,6 +757,146 @@ function Index() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function verdictChipClass(rec: Recommendation) {
+  return rec === "AUTOMATISER"
+    ? "bg-emerald-100 text-emerald-700"
+    : rec === "HYBRIDE"
+      ? "bg-amber-100 text-amber-700"
+      : "bg-rose-100 text-rose-700";
+}
+
+function PortfolioView({ data, onReset }: { data: PortfolioResult; onReset: () => void }) {
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-white via-white to-sky-50 text-slate-900">
+      <Aurora />
+      <div className="relative z-10">
+        <HeaderBar onReset={onReset} />
+        <div className="mx-auto max-w-5xl px-4 pb-16 pt-2 sm:px-7">
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm transition-colors hover:border-indigo-400 hover:text-indigo-700 animate-in fade-in duration-500"
+          >
+            <ArrowLeft className="size-3.5" /> Retour
+          </button>
+
+          <div className="mt-5 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            <Layers className="size-6 text-indigo-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Portefeuille de l’entreprise</h1>
+          </div>
+          <p className="mt-1.5 text-sm text-slate-500">
+            {data.processes.length} process passés au crible. AIceberg arbitre lesquels automatiser
+            et chiffre le gain consolidé, empreinte comprise.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Metric
+              label="Coût humain / mois"
+              value={eur.format(data.humanMonthlyTotal)}
+              source="tous process cumulés"
+            />
+            <Metric
+              label="Coût IA / mois"
+              value={eur.format(data.aiMonthlyTotal)}
+              source="cloud, tout compris"
+            />
+            <Metric
+              label="Économies / mois"
+              value={eur.format(data.monthlySavingsTotal)}
+              source={`${pct(data.savingsRateTotal)} du coût humain`}
+              positive={data.monthlySavingsTotal >= 0}
+            />
+            <Metric
+              label="Arbitrage"
+              value={`${data.countAutomate} · ${data.countHybrid} · ${data.countKeepHuman}`}
+              source="automatiser · hybride · humain"
+            />
+          </div>
+
+          <Section title="Empreinte consolidée" icon={<Leaf className="size-4 text-emerald-500" />}>
+            <div className={`px-5 py-5 ${CARD}`}>
+              <div className="grid grid-cols-3 gap-4">
+                <Foot
+                  value={`${num.format(data.energyWhTotal)} Wh`}
+                  label="Énergie / mois"
+                  source="arXiv 2505.09598"
+                />
+                <Foot
+                  value={`${num.format(data.waterMlTotal)} mL`}
+                  label="Eau / mois"
+                  source="périmètre de chaque process"
+                  highlight
+                />
+                <Foot
+                  value={`${num.format(data.carbonGCo2eTotal)} g`}
+                  label="CO₂eq / mois"
+                  source="mix électrique régional"
+                />
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Détail par process" sub="Le verdict d’AIceberg, process par process">
+            <div className={`overflow-hidden ${CARD}`}>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-left">
+                  <thead className="text-[10px] uppercase tracking-widest text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50/60">
+                      <th className="px-5 py-3.5">Process</th>
+                      <th className="px-5 py-3.5">Verdict</th>
+                      <th className="px-5 py-3.5 text-right">Humain / mois</th>
+                      <th className="px-5 py-3.5 text-right">IA / mois</th>
+                      <th className="px-5 py-3.5 text-right">Économies</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.processes.map((p, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-medium">{p.scenario.taskName}</p>
+                          <p className="text-[10px] text-slate-400">
+                            {num.format(p.scenario.monthlyVolume)} tâches/mois ·{" "}
+                            {MODEL_FACTORS[p.scenario.model].name}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${verdictChipClass(p.result.recommendation)}`}
+                          >
+                            {p.result.recommendation}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-right text-sm text-slate-500">
+                          {eur.format(p.result.humanMonthlyCost)}
+                        </td>
+                        <td className="px-5 py-4 text-right text-sm">
+                          {eur.format(p.result.aiMonthlyCost)}
+                        </td>
+                        <td
+                          className={`px-5 py-4 text-right text-sm ${p.result.monthlySavings >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+                        >
+                          {eur.format(p.result.monthlySavings)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <p className="mt-3 text-[10px] uppercase tracking-wider text-slate-400">
+              La même méthode appliquée à chaque process : on automatise ce qui dégage un gain
+              robuste, on garde l’humain là où l’IA coûte plus cher.
+            </p>
+          </Section>
         </div>
       </div>
     </main>
