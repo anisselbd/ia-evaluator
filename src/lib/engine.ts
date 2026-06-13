@@ -85,6 +85,27 @@ export const PRESETS: Record<string, Scenario> = {
     region: "france",
     waterScope: "on-site",
   },
+  // Le cas qui retourne l'intuition : tâche experte où l'humain est rapide et où
+  // l'IA exige une relecture quasi totale plus un risque d'erreur coûteux.
+  // Résultat : l'IA tout compris coûte PLUS cher que l'ingénieur. Verdict GARDER HUMAIN.
+  ingenierie: {
+    taskName: "Résoudre un ticket de bug complexe",
+    monthlyVolume: 80,
+    humanMinutesPerTask: 30,
+    loadedHourlyCostEur: 80,
+    model: "claude-opus-4-8",
+    inputTokensPerTask: 40000,
+    outputTokensPerTask: 3000,
+    humanReviewRate: 1,
+    reviewMinutes: 25,
+    residualErrorRate: 0.18,
+    errorCostEur: 350,
+    setupCostEur: 2000,
+    amortizationMonths: 12,
+    monthlySubscriptionEur: 80,
+    region: "france",
+    waterScope: "on-site",
+  },
 };
 
 export interface CostBreakdownPerTask {
