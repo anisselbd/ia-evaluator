@@ -457,11 +457,11 @@ function Verdict({ result }: { result: ReturnType<typeof evaluate> }) {
         ? Minus
         : AlertTriangle;
   return (
-    <div className={`mt-7 border p-5 sm:p-6 ${style}`}>
+    <div className={`mt-7 border p-5 sm:p-6 transition-colors duration-500 ease-out ${style}`}>
       <div className="flex gap-4">
-        <Icon className="mt-1 size-5 shrink-0" />
+        <Icon className="mt-1 size-5 shrink-0 transition-colors duration-500 ease-out" />
         <div>
-          <p className="font-mono text-2xl font-semibold">{result.recommendation}</p>
+          <p className="font-mono text-2xl font-semibold transition-colors duration-500 ease-out">{result.recommendation}</p>
           <p className="mt-2 text-sm leading-relaxed text-foreground/80">{result.explanation}</p>
         </div>
       </div>
