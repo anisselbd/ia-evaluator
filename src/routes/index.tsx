@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
@@ -331,6 +331,16 @@ function Index() {
             >
               <ArrowLeft className="size-3.5" /> Nouvelle analyse
             </button>
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-xs text-white shadow-sm transition-colors hover:bg-indigo-600"
+            >
+              <span className="relative flex h-2 w-2 mr-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Dashboard Live Ops
+            </Link>
             {estimateMeta && (
               <span className="text-[11px] text-slate-400">
                 Estimé par {estimateMeta.model} · {eurFine.format(estimateMeta.costEur)} · confiance{" "}
