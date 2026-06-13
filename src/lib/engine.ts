@@ -22,6 +22,7 @@ export interface Scenario {
   humanReviewRate: number;
   reviewMinutes: number;
   residualErrorRate: number;
+  humanErrorRate: number;
   errorCostEur: number;
   setupCostEur: number;
   amortizationMonths: number;
@@ -42,6 +43,7 @@ export const PRESETS: Record<string, Scenario> = {
     humanReviewRate: 0.4,
     reviewMinutes: 2,
     residualErrorRate: 0.02,
+    humanErrorRate: 0.01,
     errorCostEur: 25,
     setupCostEur: 1500,
     amortizationMonths: 12,
@@ -60,6 +62,7 @@ export const PRESETS: Record<string, Scenario> = {
     humanReviewRate: 0.6,
     reviewMinutes: 8,
     residualErrorRate: 0.03,
+    humanErrorRate: 0.01,
     errorCostEur: 80,
     setupCostEur: 3000,
     amortizationMonths: 12,
@@ -78,6 +81,7 @@ export const PRESETS: Record<string, Scenario> = {
     humanReviewRate: 0.8,
     reviewMinutes: 5,
     residualErrorRate: 0.01,
+    humanErrorRate: 0.01,
     errorCostEur: 200,
     setupCostEur: 2500,
     amortizationMonths: 12,
@@ -99,6 +103,7 @@ export const PRESETS: Record<string, Scenario> = {
     humanReviewRate: 1,
     reviewMinutes: 25,
     residualErrorRate: 0.18,
+    humanErrorRate: 0.01,
     errorCostEur: 350,
     setupCostEur: 2000,
     amortizationMonths: 12,
@@ -121,6 +126,7 @@ export const PRESETS: Record<string, Scenario> = {
     humanReviewRate: 0.5,
     reviewMinutes: 6,
     residualErrorRate: 0.02,
+    humanErrorRate: 0.01,
     errorCostEur: 120,
     setupCostEur: 6000,
     amortizationMonths: 12,
@@ -253,8 +259,14 @@ export function evaluate(scenario: Scenario): EvaluationResult {
   const hourlyCost = safe(scenario.loadedHourlyCostEur);
   const reviewRate = Math.min(1, safe(scenario.humanReviewRate));
   const errorRate = Math.min(1, safe(scenario.residualErrorRate));
+  const humanErrorRate = Math.min(1, safe(scenario.humanErrorRate));
 
-  const humanPerTask = (safe(scenario.humanMinutesPerTask) / 60) * hourlyCost;
+  // Baseline humain symétrique à l'IA : temps de travail + son propre risque
+  // d'erreur, valorisé au MÊME coût d'incident (un incident coûte pareil quelle
+  // que soit sa source). On supprime l'asymétrie qui pénalisait l'IA.
+  const humanPerTask =
+    (safe(scenario.humanMinutesPerTask) / 60) * hourlyCost +
+    humanErrorRate * safe(scenario.errorCostEur);
   const apiTokens =
     (safe(scenario.inputTokensPerTask) / 1_000_000) * model.inputEurPerMillionTokens +
     (safe(scenario.outputTokensPerTask) / 1_000_000) * model.outputEurPerMillionTokens;
@@ -545,13 +557,16 @@ export function compareDeployments(
   const hourlyCost = safe(scenario.loadedHourlyCostEur);
   const reviewRate = Math.min(1, safe(scenario.humanReviewRate));
   const errorRate = Math.min(1, safe(scenario.residualErrorRate));
+  const humanErrorRate = Math.min(1, safe(scenario.humanErrorRate));
 
   // Communs aux deux voies IA (dépendent de la tâche, pas du déploiement).
   const humanReview = reviewRate * (safe(scenario.reviewMinutes) / 60) * hourlyCost;
   const errorRisk = errorRate * safe(scenario.errorCostEur);
 
-  // Humain seul
-  const humanPerTask = (safe(scenario.humanMinutesPerTask) / 60) * hourlyCost;
+  // Humain seul (même terme de risque qu'evaluate, même coût d'incident).
+  const humanPerTask =
+    (safe(scenario.humanMinutesPerTask) / 60) * hourlyCost +
+    humanErrorRate * safe(scenario.errorCostEur);
   const humanMonthly = volume * humanPerTask;
 
   // Cloud (API, coût par token)

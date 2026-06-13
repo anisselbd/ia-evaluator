@@ -70,6 +70,7 @@ const DEFAULTS: Scenario = {
   humanReviewRate: 0.4,
   reviewMinutes: 2,
   residualErrorRate: 0.02,
+  humanErrorRate: 0.01,
   errorCostEur: 25,
   setupCostEur: 1500,
   amortizationMonths: 12,
@@ -90,6 +91,10 @@ const eurFine = new Intl.NumberFormat("fr-FR", {
 });
 const num = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
 
+// Borne haute stable du curseur de volume : ~2,5x le volume courant, arrondie,
+// avec un plancher pour laisser de la marge sous et au-dessus du seuil.
+const niceVolumeMax = (v: number) => Math.max(200, Math.ceil((v * 2.5) / 50) * 50);
+
 const CARD = "rounded-2xl border border-slate-200 bg-white shadow-sm";
 
 function Index() {
@@ -98,6 +103,7 @@ function Index() {
   const [portfolio, setPortfolio] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [modelSort, setModelSort] = useState<"cost" | "energy">("cost");
+  const [volumeMax, setVolumeMax] = useState(() => niceVolumeMax(DEFAULTS.monthlyVolume));
   const [isExporting, setIsExporting] = useState(false);
   const [description, setDescription] = useState("");
   const [estimating, setEstimating] = useState(false);
@@ -130,6 +136,11 @@ function Index() {
     { label: "Vérification humaine", value: result.costPerTask.humanReview, color: "bg-amber-500" },
     { label: "Risque d’erreur", value: result.costPerTask.errorRisk, color: "bg-rose-500" },
   ];
+  const aiVariablePerTask = aiSegments.reduce((acc, s) => acc + s.value, 0);
+  // Coûts fixes mensuels = aiMonthly - part variable (déduit des outputs, pas recalculé).
+  const fixedMonthly = result.aiMonthlyCost - scenario.monthlyVolume * aiVariablePerTask;
+  const aiFullPerTask =
+    scenario.monthlyVolume > 0 ? result.aiMonthlyCost / scenario.monthlyVolume : 0;
   const VerdictIcon =
     result.recommendation === "AUTOMATISER"
       ? Check
@@ -145,6 +156,7 @@ function Index() {
       const res = await estimateScenario({ data: { description } });
       if (res.ok) {
         setScenario(res.scenario as Scenario);
+        setVolumeMax(niceVolumeMax((res.scenario as Scenario).monthlyVolume));
         setEstimateMeta({
           assumptions: res.assumptions,
           confidence: res.confidence,
@@ -164,12 +176,14 @@ function Index() {
 
   const usePreset = (preset: Scenario) => {
     setScenario(preset);
+    setVolumeMax(niceVolumeMax(preset.monthlyVolume));
     setEstimateMeta(null);
     setEstimateError(null);
     setAnalyzed(true);
   };
   const manualEntry = () => {
     setEstimateMeta(null);
+    setVolumeMax(niceVolumeMax(DEFAULTS.monthlyVolume));
     setAnalyzed(true);
     setAdvancedOpen(true);
   };
@@ -181,6 +195,7 @@ function Index() {
     setEstimateMeta(null);
     setEstimateError(null);
     setScenario(DEFAULTS);
+    setVolumeMax(niceVolumeMax(DEFAULTS.monthlyVolume));
   };
 
   const exportVerdict = async () => {
@@ -362,30 +377,44 @@ function Index() {
 
           <div className={`mt-3 px-5 py-4 ${CARD}`}>
             <div className="flex items-baseline justify-between">
-              <span className="text-xs font-medium text-slate-500">Coût d’un incident</span>
-              <span className="text-sm font-semibold">{eur.format(scenario.errorCostEur)}</span>
+              <span className="text-xs font-medium text-slate-500">Volume de tâches par mois</span>
+              <span className="text-sm font-semibold">{num.format(scenario.monthlyVolume)}</span>
             </div>
             <input
               type="range"
               min={0}
-              max={Math.max(500, scenario.errorCostEur)}
-              step={5}
-              value={scenario.errorCostEur}
-              onChange={(e) => setNum("errorCostEur", e.target.value)}
+              max={volumeMax}
+              step={Math.max(1, Math.round(volumeMax / 200))}
+              value={Math.min(scenario.monthlyVolume, volumeMax)}
+              onChange={(e) => setNum("monthlyVolume", e.target.value)}
               className="mt-2 w-full accent-indigo-600"
-              aria-label="Coût d’un incident"
+              aria-label="Volume de tâches par mois"
             />
             <p className="mt-2 text-xs text-slate-500">
               {result.breakEvenVolume === null ? (
                 <>
-                  Bascule <span className="font-semibold text-rose-600">non atteinte</span> à ce niveau de risque
+                  Pas de seuil de bascule : à cette tâche l’IA coûte plus cher que l’humain par tâche,
+                  le volume n’y change rien.
                 </>
-              ) : (
+              ) : scenario.monthlyVolume >= result.breakEvenVolume ? (
                 <>
-                  Bascule à{" "}
+                  Seuil de bascule à{" "}
                   <span className="font-semibold text-slate-900">
                     {num.format(result.breakEvenVolume)} tâches/mois
                   </span>
+                  . À {num.format(scenario.monthlyVolume)}, vous êtes{" "}
+                  <span className="font-semibold text-emerald-600">au-dessus</span> : automatiser est
+                  rentable.
+                </>
+              ) : (
+                <>
+                  Seuil de bascule à{" "}
+                  <span className="font-semibold text-slate-900">
+                    {num.format(result.breakEvenVolume)} tâches/mois
+                  </span>
+                  . À {num.format(scenario.monthlyVolume)}, vous êtes{" "}
+                  <span className="font-semibold text-rose-600">en dessous</span> : gardez l’humain
+                  pour l’instant.
                 </>
               )}
             </p>
@@ -416,10 +445,15 @@ function Index() {
 
           {/* ===================== NIVEAU 2 : levier visuel + bascule ===================== */}
           <Section
-            title="Coût par tâche : humain vs IA"
+            title="Coût variable par tâche"
             sub="Le prix des tokens n’est que la pointe de l’iceberg"
           >
-            <CompareBar humanPerTask={humanPerTask} segments={aiSegments} />
+            <CompareBar
+              humanPerTask={humanPerTask}
+              segments={aiSegments}
+              fixedMonthly={fixedMonthly}
+              aiFullPerTask={aiFullPerTask}
+            />
           </Section>
 
           <Section title="Seuil de bascule" sub="Coût mensuel selon le volume de tâches">
@@ -472,6 +506,12 @@ function Index() {
                       label={{ value: "Seuil", position: "insideTopRight", fill: "#10b981", fontSize: 10 }}
                     />
                   )}
+                  <ReferenceLine
+                    x={scenario.monthlyVolume}
+                    stroke="#4f46e5"
+                    strokeDasharray="2 2"
+                    label={{ value: "Vous", position: "insideTopLeft", fill: "#4f46e5", fontSize: 10 }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="humanCost"
@@ -710,6 +750,13 @@ function Index() {
                     max={10}
                     step={0.5}
                     change={(v) => setScenario({ ...scenario, residualErrorRate: v / 100 })}
+                  />
+                  <Range
+                    label="Taux d’erreur humain"
+                    value={scenario.humanErrorRate * 100}
+                    max={10}
+                    step={0.5}
+                    change={(v) => setScenario({ ...scenario, humanErrorRate: v / 100 })}
                   />
                   <Field label="Coût d’une erreur" suffix="EUR">
                     <N value={scenario.errorCostEur} change={(v) => setNum("errorCostEur", v)} />
@@ -1108,9 +1155,13 @@ function Disclosure({
 function CompareBar({
   humanPerTask,
   segments,
+  fixedMonthly,
+  aiFullPerTask,
 }: {
   humanPerTask: number;
   segments: { label: string; value: number; color: string }[];
+  fixedMonthly: number;
+  aiFullPerTask: number;
 }) {
   const aiTotal = segments.reduce((acc, s) => acc + s.value, 0);
   const max = Math.max(humanPerTask, aiTotal, 1e-9);
@@ -1130,7 +1181,7 @@ function CompareBar({
       </div>
       <div className="mt-4">
         <div className="flex justify-between text-xs">
-          <span className="text-slate-600">IA tout compris</span>
+          <span className="text-slate-600">IA</span>
           <span className="font-medium">{eurFine.format(aiTotal)} / tâche</span>
         </div>
         <div className="mt-1.5 flex h-5 overflow-hidden rounded-lg bg-slate-100">
@@ -1143,6 +1194,11 @@ function CompareBar({
             />
           ))}
         </div>
+        {fixedMonthly > 0 && (
+          <p className="mt-1.5 text-[10px] text-slate-400">
+            + {eur.format(fixedMonthly)}/mois de coûts fixes (abo + setup amorti), hors de cette barre
+          </p>
+        )}
       </div>
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
         {segments.map((s) => (
@@ -1152,6 +1208,12 @@ function CompareBar({
             <span className="font-medium text-slate-700">{eurFine.format(s.value)}</span>
           </span>
         ))}
+      </div>
+      <div className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+        Coût complet par tâche : Humain{" "}
+        <span className="font-semibold text-slate-700">{eurFine.format(humanPerTask)}</span> · IA{" "}
+        <span className="font-semibold text-slate-700">{eurFine.format(aiFullPerTask)}</span>{" "}
+        <span className="text-slate-400">(l’IA inclut alors ses coûts fixes répartis sur le volume)</span>
       </div>
     </div>
   );

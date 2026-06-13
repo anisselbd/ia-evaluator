@@ -36,6 +36,7 @@ const EstimateSchema = z.object({
   humanReviewRate: z.number(),
   reviewMinutes: z.number(),
   residualErrorRate: z.number(),
+  humanErrorRate: z.number(),
   errorCostEur: z.number(),
   setupCostEur: z.number(),
   amortizationMonths: z.number(),
@@ -59,8 +60,9 @@ Tu réponds UNIQUEMENT avec un objet JSON valide (pas de texte autour, pas de bl
   "outputTokensPerTask": number,          // tokens de sortie typiques
   "humanReviewRate": number,              // fraction 0 à 1 des sorties relues
   "reviewMinutes": number,                // minutes de relecture par sortie vérifiée
-  "residualErrorRate": number,            // fraction 0 à 1 d'erreurs qui passent
-  "errorCostEur": number,                 // coût moyen d'une erreur non rattrapée
+  "residualErrorRate": number,            // fraction 0 à 1 d'erreurs IA qui passent
+  "humanErrorRate": number,               // fraction 0 à 1 d'erreurs qu'un humain laisse passer sur la même tâche (souvent faible, ~0.01)
+  "errorCostEur": number,                 // coût moyen d'une erreur non rattrapée (même coût quelle que soit la source, IA ou humaine)
   "setupCostEur": number,                 // coût de mise en place one-shot
   "amortizationMonths": number,           // durée d'amortissement du setup
   "monthlySubscriptionEur": number,       // abonnement mensuel à l'outil
@@ -72,7 +74,8 @@ Tu réponds UNIQUEMENT avec un objet JSON valide (pas de texte autour, pas de bl
 
 Règles :
 - Choisis le modèle IA le plus adapté à la complexité réelle : les tâches simples et répétitives vont aux petits modèles (Haiku, Gemini Flash-Lite, Mistral Small).
-- humanReviewRate et residualErrorRate sont des fractions entre 0 et 1 (0.4 pour 40%), jamais des pourcentages.
+- humanReviewRate, residualErrorRate et humanErrorRate sont des fractions entre 0 et 1 (0.4 pour 40%), jamais des pourcentages.
+- humanErrorRate (taux d'erreur d'un humain sur cette tâche) est en général plus bas que residualErrorRate ; valeur par défaut raisonnable 0.01.
 - region par défaut "france", waterScope par défaut "on-site".
 - Dans "assumptions", sois transparent : si la description manque d'une info (volume, durée...), fais une hypothèse explicite et signale-la.`;
 
@@ -123,6 +126,7 @@ export const estimateScenario = createServerFn({ method: "POST" })
         ...parsed.data,
         humanReviewRate: asFraction(parsed.data.humanReviewRate),
         residualErrorRate: asFraction(parsed.data.residualErrorRate),
+        humanErrorRate: asFraction(parsed.data.humanErrorRate),
       };
 
       const u = response.usage;
