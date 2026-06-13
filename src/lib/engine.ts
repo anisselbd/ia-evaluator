@@ -282,3 +282,104 @@ export function rankModels(scenario: Scenario): ModelRanking[] {
     }))
     .sort((a, b) => a.aiMonthlyCost - b.aiMonthlyCost);
 }
+
+// =============================================================================
+// EXTENSIONS : courbe de bascule, score de sobriété, fourchettes d'incertitude.
+// Fonctions pures additionnelles, l'interface existante est inchangée.
+// =============================================================================
+
+export interface CurvePoint {
+  volume: number;
+  humanCost: number;
+  aiCost: number;
+}
+
+// Points pour tracer coût humain vs coût IA selon le volume mensuel, afin de
+// visualiser le seuil de bascule (le croisement des deux courbes).
+export function breakEvenCurve(scenario: Scenario, points = 24): CurvePoint[] {
+  const evalAt = evaluate(scenario);
+  const maxVolume = Math.max(
+    safe(scenario.monthlyVolume) * 2,
+    (evalAt.breakEvenVolume ?? 50) * 2,
+    50,
+  );
+  const step = maxVolume / points;
+  const out: CurvePoint[] = [];
+  for (let i = 0; i <= points; i++) {
+    const volume = Math.round(i * step);
+    const r = evaluate({ ...scenario, monthlyVolume: volume });
+    out.push({ volume, humanCost: r.humanMonthlyCost, aiCost: r.aiMonthlyCost });
+  }
+  return out;
+}
+
+export interface SobrietyEntry {
+  model: ModelId;
+  modelName: string;
+  provider: string;
+  energyWhMonthly: number;
+  waterMlOnSiteMonthly: number;
+  carbonGCo2eMonthly: number;
+  aiMonthlyCost: number;
+  // 0 à 100, 100 = le plus sobre (moins d'énergie consommée pour la même tâche).
+  sobrietyScore: number;
+}
+
+// Classe les modèles par sobriété environnementale pour une tâche donnée.
+// Exemple d'idée cité par le brief 07.
+export function rankBySobriety(scenario: Scenario): SobrietyEntry[] {
+  const entries: SobrietyEntry[] = (Object.values(MODEL_FACTORS) as ModelFactors[])
+    .filter((m) => m.id !== "other")
+    .map((m) => {
+      const r = evaluate({ ...scenario, model: m.id });
+      return {
+        model: m.id,
+        modelName: m.name,
+        provider: m.provider,
+        energyWhMonthly: r.footprint.energyWh,
+        waterMlOnSiteMonthly: r.footprint.waterMlOnSite,
+        carbonGCo2eMonthly: r.footprint.carbonGCo2e,
+        aiMonthlyCost: r.aiMonthlyCost,
+        sobrietyScore: 0,
+      };
+    });
+  const energies = entries.map((e) => e.energyWhMonthly).filter((x) => x > 0);
+  const minEnergy = energies.length ? Math.min(...energies) : 0;
+  for (const e of entries) {
+    e.sobrietyScore =
+      e.energyWhMonthly > 0 && minEnergy > 0
+        ? Math.round((100 * minEnergy) / e.energyWhMonthly)
+        : 100;
+  }
+  return entries.sort((a, b) => b.sobrietyScore - a.sobrietyScore);
+}
+
+export interface RangeValue {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+export interface FootprintRange {
+  energyWh: RangeValue;
+  waterMl: RangeValue;
+  carbonGCo2e: RangeValue;
+}
+
+// Fourchettes d'incertitude assumées. L'énergie varie largement dans la
+// littérature (0,42 à 1,79 Wh pour GPT-4o) : bande [0,55x ; 1,7x] autour du central.
+// L'eau dépend surtout du périmètre : borne basse on-site (1,7 mL/Wh), borne haute
+// cycle de vie (45 mL/Wh). Le carbone hérite de la bande énergie, à intensité région fixe.
+export function footprintRange(scenario: Scenario): FootprintRange {
+  const e = evaluate(scenario).footprint.energyWh;
+  const intensity = CARBON_G_PER_WH[scenario.region];
+  return {
+    energyWh: { low: e * 0.55, mid: e, high: e * 1.7 },
+    waterMl: { low: e * 1.7, mid: e * ((1.7 + 45) / 2), high: e * 45 },
+    carbonGCo2e: {
+      low: e * 0.55 * intensity,
+      mid: e * intensity,
+      high: e * 1.7 * intensity,
+    },
+  };
+}
