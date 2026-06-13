@@ -227,6 +227,24 @@ function Index() {
                 <option value="world">Monde</option>
               </select>
             </Field>
+            <Field label="Périmètre eau">
+              <div className="flex rounded-sm border border-border bg-panel">
+                {(["on-site", "life-cycle"] as WaterScope[]).map((scope) => (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setScenario({ ...scenario, waterScope: scope })}
+                    className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
+                      scenario.waterScope === scope
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {scope === "on-site" ? "On-site" : "Cycle de vie"}
+                  </button>
+                ))}
+              </div>
+            </Field>
           </div>
         </section>
 
