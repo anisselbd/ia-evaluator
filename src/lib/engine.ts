@@ -383,3 +383,56 @@ export function footprintRange(scenario: Scenario): FootprintRange {
     },
   };
 }
+
+// =============================================================================
+// MODE PORTEFEUILLE : agrège plusieurs process pour piloter l'IA à l'échelle
+// d'une entreprise. Le calculateur mono-tâche devient un outil de décision global.
+// =============================================================================
+
+export interface PortfolioProcess {
+  scenario: Scenario;
+  result: EvaluationResult;
+}
+
+export interface PortfolioResult {
+  processes: PortfolioProcess[];
+  humanMonthlyTotal: number;
+  aiMonthlyTotal: number;
+  monthlySavingsTotal: number;
+  savingsRateTotal: number;
+  energyWhTotal: number;
+  waterMlTotal: number;
+  carbonGCo2eTotal: number;
+  countAutomate: number;
+  countHybrid: number;
+  countKeepHuman: number;
+}
+
+export function evaluatePortfolio(scenarios: Scenario[]): PortfolioResult {
+  const processes: PortfolioProcess[] = scenarios.map((scenario) => ({
+    scenario,
+    result: evaluate(scenario),
+  }));
+
+  const sum = (pick: (p: PortfolioProcess) => number) =>
+    processes.reduce((acc, p) => acc + pick(p), 0);
+
+  const humanMonthlyTotal = sum((p) => p.result.humanMonthlyCost);
+  const aiMonthlyTotal = sum((p) => p.result.aiMonthlyCost);
+  const monthlySavingsTotal = humanMonthlyTotal - aiMonthlyTotal;
+
+  return {
+    processes,
+    humanMonthlyTotal,
+    aiMonthlyTotal,
+    monthlySavingsTotal,
+    savingsRateTotal:
+      humanMonthlyTotal > 0 ? monthlySavingsTotal / humanMonthlyTotal : 0,
+    energyWhTotal: sum((p) => p.result.footprint.energyWh),
+    waterMlTotal: sum((p) => p.result.footprint.waterMl),
+    carbonGCo2eTotal: sum((p) => p.result.footprint.carbonGCo2e),
+    countAutomate: processes.filter((p) => p.result.recommendation === "AUTOMATISER").length,
+    countHybrid: processes.filter((p) => p.result.recommendation === "HYBRIDE").length,
+    countKeepHuman: processes.filter((p) => p.result.recommendation === "GARDER HUMAIN").length,
+  };
+}
