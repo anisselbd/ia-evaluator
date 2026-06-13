@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, Check, Leaf, Minus } from "lucide-react";
 import {
   MODEL_FACTORS,
+  PRESETS,
   evaluate,
   rankModels,
   type ModelId,
