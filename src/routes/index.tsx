@@ -1509,6 +1509,25 @@ function fmtCount(v: number, kind?: string) {
   return kind === "eur" ? eur.format(v) : num.format(v);
 }
 
+// Titre dont chaque mot monte depuis un masque. Découpé en JSX (pas de mutation
+// DOM) pour survivre aux re-renders React ; aria-label garde le texte lisible.
+function RevealWords({ text, className }: { text: string; className?: string }) {
+  return (
+    <span className={className} aria-label={text}>
+      {text.split(" ").map((word, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          className="inline-block overflow-hidden align-bottom pb-[0.12em]"
+          style={{ marginBottom: "-0.12em" }}
+        >
+          <span className="reveal-word inline-block">{word}&nbsp;</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function BrowserFrame({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="show-frame overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40 [will-change:transform]">
@@ -1540,13 +1559,15 @@ function ShowSection({
     <section className="show-section px-4 py-24 sm:px-8">
       <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
         <div className={reverse ? "lg:order-2" : ""}>
-          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="reveal-up text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80">
             {kicker}
           </p>
-          <h2 className="show-reveal mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
-          <p className="show-reveal mt-4 max-w-md text-sm leading-relaxed text-white/70">{body}</p>
+          <h2 className="mt-3 text-2xl font-bold tracking-tight drop-shadow sm:text-3xl">
+            <RevealWords text={title} />
+          </h2>
+          <p className="reveal-up mt-4 max-w-md text-sm leading-relaxed text-white/75">{body}</p>
         </div>
-        <div className={`show-reveal ${reverse ? "lg:order-1" : ""}`}>{children}</div>
+        <div className={`frame-wrap ${reverse ? "lg:order-1" : ""}`}>{children}</div>
       </div>
     </section>
   );
@@ -1566,26 +1587,58 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
       const mm = gsap.matchMedia();
       mm.add("(min-width: 769px) and (prefers-reduced-motion: no-preference)", () => {
         const tweens: any[] = [];
-        // Révélation décalée du texte + des cadres par section.
+        // Par section : titres mot par mot (montée depuis un masque),
+        // kicker / corps / cartes en fondu + flou + remontée, en cascade.
         gsap.utils.toArray<HTMLElement>(".show-section").forEach((sec) => {
+          const words = sec.querySelectorAll(".reveal-word");
+          if (words.length) {
+            tweens.push(
+              gsap.from(words, {
+                yPercent: 120,
+                duration: 0.85,
+                stagger: 0.05,
+                ease: "power4.out",
+                scrollTrigger: { trigger: sec, start: "top 78%" },
+              }),
+            );
+          }
+          const ups = sec.querySelectorAll(".reveal-up");
+          if (ups.length) {
+            tweens.push(
+              gsap.from(ups, {
+                opacity: 0,
+                y: 42,
+                filter: "blur(6px)",
+                duration: 0.8,
+                stagger: 0.1,
+                ease: "power2.out",
+                scrollTrigger: { trigger: sec, start: "top 75%" },
+              }),
+            );
+          }
+        });
+        // Cadres : entrée 3D (bascule depuis le bas + zoom + fondu) puis parallaxe.
+        gsap.utils.toArray<HTMLElement>(".show-frame").forEach((frame) => {
           tweens.push(
-            gsap.from(sec.querySelectorAll(".show-reveal"), {
+            gsap.from(frame, {
               opacity: 0,
-              y: 50,
-              duration: 0.8,
-              stagger: 0.12,
+              yPercent: 6,
+              rotateX: 16,
+              scale: 0.94,
+              transformPerspective: 1000,
+              transformOrigin: "50% 90%",
+              duration: 1.1,
               ease: "power3.out",
-              scrollTrigger: { trigger: sec, start: "top 75%" },
+              scrollTrigger: { trigger: frame, start: "top 82%" },
             }),
           );
         });
-        // Parallaxe douce sur les cadres.
-        gsap.utils.toArray<HTMLElement>(".show-frame").forEach((frame) => {
+        gsap.utils.toArray<HTMLElement>(".frame-wrap").forEach((el) => {
           tweens.push(
-            gsap.to(frame, {
-              y: -36,
+            gsap.to(el, {
+              y: -44,
               ease: "none",
-              scrollTrigger: { trigger: frame, start: "top bottom", end: "bottom top", scrub: true },
+              scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true },
             }),
           );
         });
@@ -1626,17 +1679,17 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
       {/* 00 — La partie immergée (intro, glass cards sur la vidéo) */}
       <section className="show-section px-4 py-24 sm:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80">
+          <p className="reveal-up text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80">
             La partie immergée
           </p>
-          <h2 className="show-reveal mt-3 max-w-2xl text-2xl font-bold tracking-tight drop-shadow sm:text-3xl">
-            Ce qui coûte vraiment dans un projet d’automatisation est sous la surface
+          <h2 className="mt-3 max-w-2xl text-2xl font-bold tracking-tight drop-shadow sm:text-3xl">
+            <RevealWords text="Ce qui coûte vraiment dans un projet d’automatisation est sous la surface" />
           </h2>
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
             {HANDOFF_BLOCKS.map(({ Icon, title, body }) => (
               <div
                 key={title}
-                className="show-reveal rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-md"
+                className="reveal-up rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-md"
               >
                 <Icon className="size-5 text-cyan-200" />
                 <h3 className="mt-4 text-base font-semibold">{title}</h3>
@@ -1765,14 +1818,14 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
       {/* 05 — Portefeuille, compteurs animés */}
       <section className="show-section px-4 py-28 text-center sm:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="reveal-up text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80">
             05 · À l’échelle de l’entreprise
           </p>
-          <h2 className="show-reveal mx-auto mt-3 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
-            Tous vos process passés au crible, un seul arbitrage consolidé
+          <h2 className="mx-auto mt-3 max-w-2xl text-2xl font-bold tracking-tight drop-shadow sm:text-3xl">
+            <RevealWords text="Tous vos process passés au crible, un seul arbitrage consolidé" />
           </h2>
           <div className="mt-14 grid gap-8 sm:grid-cols-3">
-            <div className="show-reveal">
+            <div className="reveal-up">
               <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
                 <span
                   className="count"
@@ -1784,7 +1837,7 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
               </p>
               <p className="mt-2 text-sm text-white/60">d’économies potentielles / mois</p>
             </div>
-            <div className="show-reveal">
+            <div className="reveal-up">
               <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
                 <span className="count" data-target={DEMO_PORTFOLIO.processes.length} data-kind="num">
                   {num.format(DEMO_PORTFOLIO.processes.length)}
@@ -1792,7 +1845,7 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
               </p>
               <p className="mt-2 text-sm text-white/60">process analysés en un coup d’œil</p>
             </div>
-            <div className="show-reveal">
+            <div className="reveal-up">
               <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
                 <span className="count" data-target={DEMO_PORTFOLIO.countAutomate} data-kind="num">
                   {num.format(DEMO_PORTFOLIO.countAutomate)}
@@ -1805,18 +1858,18 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
       </section>
 
       {/* CTA final */}
-      <section className="px-4 py-32 text-center sm:px-8">
+      <section className="show-section px-4 py-32 text-center sm:px-8">
         <div className="mx-auto max-w-2xl">
-          <h2 className="show-reveal text-3xl font-bold tracking-tight sm:text-4xl">
-            Prêt à savoir si vous devez vraiment automatiser ?
+          <h2 className="text-3xl font-bold tracking-tight drop-shadow sm:text-4xl">
+            <RevealWords text="Prêt à savoir si vous devez vraiment automatiser ?" />
           </h2>
-          <p className="show-reveal mt-4 text-base text-white/70">
+          <p className="reveal-up mt-4 text-base text-white/75">
             Une phrase, trente secondes, un verdict chiffré et sourcé.
           </p>
           <button
             type="button"
             onClick={onCTA}
-            className="show-reveal mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-7 py-3.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03]"
+            className="reveal-up mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-7 py-3.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03]"
           >
             <Sparkles className="size-4" />
             Lancer une analyse
