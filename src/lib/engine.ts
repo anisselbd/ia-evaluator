@@ -8,6 +8,7 @@ export type ModelId =
   | "other";
 
 export type Region = "france" | "eu" | "usa" | "world";
+export type WaterScope = "on-site" | "life-cycle";
 export type Recommendation = "AUTOMATISER" | "HYBRIDE" | "GARDER HUMAIN";
 
 export interface Scenario {
@@ -26,6 +27,7 @@ export interface Scenario {
   amortizationMonths: number;
   monthlySubscriptionEur: number;
   region: Region;
+  waterScope: WaterScope;
 }
 
 export const PRESETS: Record<string, Scenario> = {
@@ -45,6 +47,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 40,
     region: "france",
+    waterScope: "on-site",
   },
   "fiches-produit": {
     taskName: "Rédaction de fiches produit",
@@ -62,6 +65,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 60,
     region: "france",
+    waterScope: "on-site",
   },
   "tri-candidatures": {
     taskName: "Tri de candidatures RH",
@@ -79,6 +83,7 @@ export const PRESETS: Record<string, Scenario> = {
     amortizationMonths: 12,
     monthlySubscriptionEur: 50,
     region: "france",
+    waterScope: "on-site",
   },
 };
 
@@ -91,6 +96,8 @@ export interface CostBreakdownPerTask {
 export interface Footprint {
   energyWh: number;
   waterMl: number;
+  waterMlOnSite: number;
+  waterMlLifeCycle: number;
   carbonGCo2e: number;
 }
 
@@ -224,6 +231,9 @@ export function evaluate(scenario: Scenario): EvaluationResult {
   const totalTokensThousands =
     (safe(scenario.inputTokensPerTask) + safe(scenario.outputTokensPerTask)) / 1_000;
   const energyWh = volume * totalTokensThousands * model.energyWhPerThousandTokens;
+  const waterMlOnSite = energyWh * 1.7;
+  const waterMlLifeCycle = energyWh * 45;
+  const waterMl = scenario.waterScope === "life-cycle" ? waterMlLifeCycle : waterMlOnSite;
 
   return {
     recommendation,
@@ -237,7 +247,9 @@ export function evaluate(scenario: Scenario): EvaluationResult {
     costPerTask: { apiTokens, humanReview, errorRisk },
     footprint: {
       energyWh,
-      waterMl: energyWh * 1.7,
+      waterMl,
+      waterMlOnSite,
+      waterMlLifeCycle,
       carbonGCo2e: energyWh * 0.42,
     },
   };

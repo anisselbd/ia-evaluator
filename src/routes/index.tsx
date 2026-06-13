@@ -10,6 +10,7 @@ import {
   type ModelId,
   type Region,
   type Scenario,
+  type WaterScope,
 } from "../lib/engine";
 
 export const Route = createFileRoute("/")({
@@ -46,6 +47,7 @@ const DEFAULTS: Scenario = {
   amortizationMonths: 12,
   monthlySubscriptionEur: 40,
   region: "france",
+  waterScope: "on-site",
 };
 const eur = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -225,6 +227,24 @@ function Index() {
                 <option value="world">Monde</option>
               </select>
             </Field>
+            <Field label="Périmètre eau">
+              <div className="flex rounded-sm border border-border bg-panel">
+                {(["on-site", "life-cycle"] as WaterScope[]).map((scope) => (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setScenario({ ...scenario, waterScope: scope })}
+                    className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
+                      scenario.waterScope === scope
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {scope === "on-site" ? "On-site" : "Cycle de vie"}
+                  </button>
+                ))}
+              </div>
+            </Field>
           </div>
         </section>
 
@@ -318,7 +338,8 @@ function Index() {
               <Foot
                 value={`${num.format(result.footprint.waterMl)} mL`}
                 label="Eau"
-                source="facteur datacenter"
+                source={`${scenario.waterScope === "life-cycle" ? "Cycle de vie" : "On-site"} · facteur ${scenario.waterScope === "life-cycle" ? "45" : "1,7"} mL/Wh`}
+                highlight
               />
               <Foot
                 value={`${num.format(result.footprint.carbonGCo2e)} g`}
@@ -326,9 +347,17 @@ function Index() {
                 source="mix électrique régional"
               />
             </div>
-            <p className="mt-3 text-[10px] text-muted-foreground">
-              Estimations sourcées, fourchettes assumées · facteurs temporaires
-            </p>
+            <div className="mt-3 flex items-start gap-2 rounded-sm border border-border bg-panel px-3 py-2">
+              <span className="mt-0.5 text-[10px] text-muted-foreground">Fourchette eau :</span>
+              <span className="font-mono text-[10px]">
+                {num.format(result.footprint.waterMlOnSite)} – {num.format(result.footprint.waterMlLifeCycle)} mL
+              </span>
+              <span className="ml-auto max-w-[60%] text-[10px] leading-tight text-muted-foreground">
+                L’écart reflète le périmètre comptabilisé : refroidissement direct du datacenter (on-site)
+                versus fabrication des puces, construction de l’infrastructure et cycle de vie complet (life-cycle).
+                Les études sur ce sujet varient d’un facteur 10 à 50.
+              </span>
+            </div>
           </div>
         </section>
       </div>
@@ -579,9 +608,19 @@ function Metric({
     </div>
   );
 }
-function Foot({ value, label, source }: { value: string; label: string; source: string }) {
+function Foot({
+  value,
+  label,
+  source,
+  highlight,
+}: {
+  value: string;
+  label: string;
+  source: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="border-l border-border pl-3">
+    <div className={`border-l border-border pl-3 ${highlight ? "border-l-primary" : ""}`}>
       <p className="font-mono text-sm sm:text-base">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
       <p className="mt-1 text-[8px] text-muted-foreground/70">{source}</p>
