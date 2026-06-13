@@ -185,8 +185,10 @@ function Index() {
         <header className="px-5 py-5 sm:px-8">
           <div className="mx-auto flex max-w-6xl items-center justify-between">
             <button type="button" onClick={reset} className="flex items-center gap-2 text-left">
-              <img src="/logo-aiceberg.png" alt="AIceberg" className="size-10" />
-              <span className="text-lg font-semibold tracking-tight">AIceberg</span>
+              <img src="/logo-aiceberg.png" alt="AIceberg" className="size-9 mix-blend-multiply" />
+              <span className="text-lg font-semibold tracking-tight">
+                <span className="text-indigo-600">AI</span>ceberg
+              </span>
             </button>
             <span className="hidden items-center gap-2 text-[11px] text-slate-400 sm:flex">
               <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" /> Calcul en temps réel
@@ -200,16 +202,14 @@ function Index() {
               <img
                 src="/logo-aiceberg.png"
                 alt="AIceberg"
-                className="mx-auto mb-6 size-28"
+                className="mx-auto mb-4 size-24 mix-blend-multiply"
                 style={{ animation: "floaty 6s ease-in-out infinite" }}
               />
-              <span className="inline-block rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm">
+              <span className="inline-block rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm">
                 Automatiser, oui. Mais à quel prix ?
               </span>
-              <h1 className="mt-6 bg-gradient-to-br from-slate-900 to-indigo-700 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl">
-                Le vrai coût de
-                <br />
-                l’automatisation
+              <h1 className="mx-auto mt-5 max-w-xl text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                Le vrai coût de l’automatisation
               </h1>
               <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-500">
                 Décrivez un process. On vous dit s’il faut l’automatiser, avec quel modèle, et combien
