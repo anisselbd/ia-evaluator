@@ -1,10 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, Check, Download, Leaf, Minus } from "lucide-react";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import {
   MODEL_FACTORS,
   PRESETS,
+  breakEvenCurve,
   evaluate,
   rankModels,
   type ModelId,
@@ -67,6 +80,7 @@ function Index() {
   const [isExporting, setIsExporting] = useState(false);
   const verdictRef = useRef<HTMLDivElement>(null);
   const result = useMemo(() => evaluate(scenario), [scenario]);
+  const curve = useMemo(() => breakEvenCurve(scenario), [scenario]);
   const ranking = useMemo(() => rankModels(scenario), [scenario]);
   const setNum = (key: keyof Scenario, value: string) =>
     setScenario((s) => ({ ...s, [key]: Number(value) || 0 }));
@@ -256,6 +270,98 @@ function Index() {
               sub={`Pour « ${scenario.taskName || "cette tâche"} »`}
             />
             <Verdict result={result} />
+            <div className="mt-4 border border-border bg-panel px-3 py-4 sm:px-5">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-medium">Seuil de bascule</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Coût mensuel selon le volume de tâches
+                  </p>
+                </div>
+                {result.breakEvenVolume !== null && (
+                  <span className="shrink-0 rounded-sm bg-positive-soft px-2 py-1 font-mono text-[10px] text-positive">
+                    {num.format(result.breakEvenVolume)} tâches/mois
+                  </span>
+                )}
+              </div>
+              <div className="h-64 w-full" aria-label="Courbe du seuil de bascule entre coût humain et coût IA">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="volume"
+                      stroke="var(--muted-foreground)"
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--border)" }}
+                      tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                      tickFormatter={(value: number) => num.format(value)}
+                    />
+                    <YAxis
+                      width={55}
+                      stroke="var(--muted-foreground)"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                      tickFormatter={(value: number) => `${num.format(value)} €`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "var(--radius)",
+                        color: "var(--popover-foreground)",
+                        fontSize: 12,
+                      }}
+                      labelFormatter={(value) => `${num.format(Number(value))} tâches/mois`}
+                      formatter={(value, name) => [eur.format(Number(value)), name]}
+                    />
+                    <Legend
+                      iconType="plainline"
+                      wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)" }}
+                    />
+                    {result.breakEvenVolume !== null && (
+                      <ReferenceArea
+                        x1={result.breakEvenVolume}
+                        x2={curve.at(-1)?.volume}
+                        fill="var(--positive)"
+                        fillOpacity={0.08}
+                      />
+                    )}
+                    {result.breakEvenVolume !== null && (
+                      <ReferenceLine
+                        x={result.breakEvenVolume}
+                        stroke="var(--positive)"
+                        strokeDasharray="5 5"
+                        label={{
+                          value: "Bascule",
+                          position: "insideTopRight",
+                          fill: "var(--positive)",
+                          fontSize: 10,
+                        }}
+                      />
+                    )}
+                    <Line
+                      type="monotone"
+                      dataKey="humanCost"
+                      name="Coût humain"
+                      stroke="var(--muted-foreground)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="aiCost"
+                      name="Coût IA"
+                      stroke="var(--positive)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
           <Button
             type="button"
