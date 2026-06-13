@@ -185,7 +185,7 @@ function Index() {
         <header className="px-5 py-5 sm:px-8">
           <div className="mx-auto flex max-w-6xl items-center justify-between">
             <button type="button" onClick={reset} className="flex items-center gap-2 text-left">
-              <img src="/logo-aiceberg.png" alt="AIceberg" className="size-9 mix-blend-multiply" />
+              <img src="/logo-aiceberg.png" alt="AIceberg" className="size-9" />
               <span className="text-lg font-semibold tracking-tight">
                 <span className="text-indigo-600">AI</span>ceberg
               </span>
@@ -202,7 +202,7 @@ function Index() {
               <img
                 src="/logo-aiceberg.png"
                 alt="AIceberg"
-                className="mx-auto mb-4 size-24 mix-blend-multiply"
+                className="mx-auto mb-4 size-24"
                 style={{ animation: "floaty 6s ease-in-out infinite" }}
               />
               <span className="inline-block rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm">
