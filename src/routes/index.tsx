@@ -40,12 +40,12 @@ import { estimateScenario } from "../lib/api/estimate.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Bascule : le vrai coût de l’automatisation IA" },
+      { title: "AIceberg : le vrai coût de l’automatisation IA" },
       {
         name: "description",
-        content: "Décrivez un process, Bascule vous dit s’il faut l’automatiser, avec quel modèle et à quel coût réel.",
+        content: "Décrivez un process, AIceberg vous dit s’il faut l’automatiser, avec quel modèle et à quel coût réel.",
       },
-      { property: "og:title", content: "Bascule : le vrai coût de l’automatisation IA" },
+      { property: "og:title", content: "AIceberg : le vrai coût de l’automatisation IA" },
       {
         property: "og:description",
         content: "Un arbitrage chiffré entre humain, cloud et IA locale souveraine.",
@@ -170,7 +170,7 @@ function Index() {
         .replace(/[^a-zA-Z0-9]+/g, "-")
         .replace(/^-|-$/g, "")
         .toLowerCase();
-      link.download = `verdict-bascule-${taskSlug || "scenario"}.png`;
+      link.download = `verdict-aiceberg-${taskSlug || "scenario"}.png`;
       link.href = dataUrl;
       link.click();
     } finally {
@@ -188,7 +188,7 @@ function Index() {
               <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30">
                 <Sparkles className="size-4" />
               </span>
-              <span className="text-lg font-semibold tracking-tight">Bascule</span>
+              <span className="text-lg font-semibold tracking-tight">AIceberg</span>
             </button>
             <span className="hidden items-center gap-2 text-[11px] text-white/50 sm:flex">
               <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" /> Calcul en temps réel
@@ -344,7 +344,10 @@ function Index() {
               {isExporting ? "Export en cours…" : "Exporter le verdict en image"}
             </button>
 
-            <Section title="Le coût caché" sub="Le prix de l’API n’est qu’une fraction du total">
+            <Section
+              title="La partie immergée"
+              sub="Le prix de l’API n’est que la pointe de l’iceberg"
+            >
               <div className={`space-y-4 px-5 py-5 ${CARD}`}>
                 <Break
                   label="Tokens API"
@@ -466,7 +469,7 @@ function Index() {
                         x={result.breakEvenVolume}
                         stroke="#34d399"
                         strokeDasharray="5 5"
-                        label={{ value: "Bascule", position: "insideTopRight", fill: "#34d399", fontSize: 10 }}
+                        label={{ value: "Seuil", position: "insideTopRight", fill: "#34d399", fontSize: 10 }}
                       />
                     )}
                     <Line
