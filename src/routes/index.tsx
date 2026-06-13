@@ -1231,8 +1231,7 @@ function pct(value: number) {
 // =============================================================================
 const SURFACE_LOOP_END = 4.5; // s : fin du segment surface (juste avant le xfade à 4.54)
 const DIVE_DURATION = 9.5417; // s : durée réelle de public/dive-full.mp4 (ffprobe)
-const PIN_DISTANCE = 1.8; // multiplicateur de viewport height pour la zone pinnée
-const HANDOFF_BG = "#1c474d"; // teinte bleu-pétrole, prolonge la dernière frame (#255a62)
+const PAGE_BG = "#0a2429"; // fond de secours derrière la vidéo (teinte abysse)
 
 const HANDOFF_BLOCKS = [
   {
@@ -1276,6 +1275,7 @@ function LandingHero({
   const heroRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const modeRef = useRef<"loop" | "scrub">("loop");
 
   useEffect(() => {
@@ -1284,8 +1284,8 @@ function LandingHero({
     let mounted = true;
     let cleanup = () => {};
 
-    // Boucle surface vivante : on rembobine à 0 dès qu'on dépasse SURFACE_LOOP_END,
-    // mais uniquement en mode loop (jamais pendant le scrub).
+    // Boucle surface vivante au repos : on rembobine à 0 dès qu'on dépasse
+    // SURFACE_LOOP_END, mais uniquement en mode loop (jamais pendant le scrub).
     const onTimeUpdate = () => {
       if (modeRef.current === "loop" && video.currentTime >= SURFACE_LOOP_END) {
         video.currentTime = 0;
@@ -1301,7 +1301,8 @@ function LandingHero({
       gsap.registerPlugin(ScrollTrigger);
       const mm = gsap.matchMedia();
 
-      // DESKTOP : pin + scrub déterministe + machine loop↔scrub.
+      // DESKTOP : la vidéo de FOND scrub sur TOUTE la hauteur de page (pas de pin,
+      // le contenu défile par-dessus). Boucle surface au repos, scrub dès le scroll.
       mm.add("(min-width: 769px) and (prefers-reduced-motion: no-preference)", () => {
         modeRef.current = "loop";
         video.loop = false;
@@ -1310,12 +1311,10 @@ function LandingHero({
         video.addEventListener("timeupdate", onTimeUpdate);
 
         const st = ScrollTrigger.create({
-          trigger: heroRef.current,
+          trigger: pageRef.current,
           start: "top top",
-          end: () => "+=" + window.innerHeight * PIN_DISTANCE,
-          pin: heroRef.current,
-          anticipatePin: 1,
-          scrub: true, // un seul lissage : on seek la vidéo directement
+          end: "bottom bottom", // la vidéo défile jusqu'au bas de page
+          scrub: true,
           onUpdate: (self) => {
             if (self.progress <= 0.001) {
               if (modeRef.current !== "loop") {
@@ -1329,48 +1328,34 @@ function LandingHero({
               modeRef.current = "scrub";
               video.pause();
             }
-            // Remap DÉTERMINISTE : 4.5s → 9.5417s, identique à chaque plongée.
-            // Le micro-saut vers 4.5s est masqué par la zone du xfade.
-            video.currentTime =
-              SURFACE_LOOP_END + self.progress * (DIVE_DURATION - SURFACE_LOOP_END);
+            // Remap déterministe : toute la vidéo (0 → fin) sur toute la page.
+            video.currentTime = self.progress * DIVE_DURATION;
           },
         });
 
-        // Titre / sous-titre / input : fade + remontée sur les 20 premiers % du pin.
+        // L'input du hero se dissout en remontant quand la 1re vue quitte l'écran.
         const fade = gsap.to(contentRef.current, {
           opacity: 0,
-          y: -40,
+          y: -60,
           ease: "none",
           force3D: true,
           scrollTrigger: {
             trigger: heroRef.current,
             start: "top top",
-            end: () => "+=" + window.innerHeight * PIN_DISTANCE * 0.2,
+            end: "bottom top",
             scrub: true,
           },
-        });
-
-        // Révélation décalée des 3 blocs du handoff.
-        const reveal = gsap.from(".handoff-block", {
-          opacity: 0,
-          y: 40,
-          duration: 0.7,
-          stagger: 0.15,
-          ease: "power3.out",
-          scrollTrigger: { trigger: ".handoff-section", start: "top 80%" },
         });
 
         return () => {
           video.removeEventListener("timeupdate", onTimeUpdate);
           fade.scrollTrigger?.kill();
           fade.kill();
-          reveal.scrollTrigger?.kill();
-          reveal.kill();
           st.kill();
         };
       });
 
-      // MOBILE + REDUCED-MOTION : boucle surface vivante, pas de scrub ni de pin.
+      // MOBILE + REDUCED-MOTION : boucle surface vivante, pas de scrub.
       // (poster en secours si l'autoplay est bloqué).
       mm.add("(max-width: 768px), (prefers-reduced-motion: reduce)", () => {
         modeRef.current = "loop";
@@ -1391,28 +1376,32 @@ function LandingHero({
   }, []);
 
   return (
-    <main className="text-white" style={{ backgroundColor: HANDOFF_BG }}>
-      <section ref={heroRef} className="relative h-screen w-full overflow-hidden">
+    <main className="relative text-white" style={{ backgroundColor: PAGE_BG }}>
+      {/* Fond vidéo FIXE, scrubbé par le scroll, derrière tout le contenu. */}
+      <div className="fixed inset-0 z-0">
         <video
           ref={videoRef}
-          className="absolute inset-0 size-full object-cover"
+          className="size-full object-cover"
           muted
           playsInline
           preload="auto"
           poster="/hero-poster.jpg"
           src="/dive-full.mp4"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/35 to-slate-950/80" />
+        <div className="absolute inset-0 bg-slate-950/55" />
+      </div>
 
-        <div className="absolute inset-x-0 top-0 z-20">
-          <HeaderBar light onReset={onReset} />
-        </div>
-
-        <div
-          ref={contentRef}
-          className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center [will-change:transform,opacity]"
+      {/* Contenu qui défile PAR-DESSUS la vidéo. */}
+      <div ref={pageRef} className="relative z-10">
+        <section
+          ref={heroRef}
+          className="relative flex min-h-screen flex-col items-center justify-center px-4 text-center"
         >
-          <div className="w-full max-w-2xl">
+          <div className="absolute inset-x-0 top-0 z-30">
+            <HeaderBar light onReset={onReset} />
+          </div>
+
+          <div ref={contentRef} className="w-full max-w-2xl [will-change:transform,opacity]">
             <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-medium text-white/85 backdrop-blur">
               Automatiser, oui. Mais à quel prix ?
             </span>
@@ -1488,34 +1477,352 @@ function LandingHero({
             Défiler pour plonger
             <ChevronDown className="size-4 animate-bounce" />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section
-        className="handoff-section relative px-4 py-24 sm:px-8"
-        style={{ backgroundColor: HANDOFF_BG }}
-      >
+        <LandingShowcase onCTA={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+      </div>
+    </main>
+  );
+}
+
+// =============================================================================
+// LANDING SHOWCASE : voyage scrollé qui déroule le produit avec les VRAIS
+// composants rendus en live dans des cadres navigateur, animés au scroll GSAP.
+// Données d'exemple calculées une fois via le moteur (fonctions pures).
+// =============================================================================
+const DEMO = PRESETS.sav;
+const DEMO_RESULT = evaluate(DEMO);
+const DEMO_CURVE = breakEvenCurve(DEMO);
+const DEMO_HUMAN_PER_TASK = DEMO_RESULT.humanMonthlyCost / DEMO.monthlyVolume;
+const DEMO_SEGMENTS = [
+  { label: "Tokens API", value: DEMO_RESULT.costPerTask.apiTokens, color: "bg-emerald-500" },
+  { label: "Vérification humaine", value: DEMO_RESULT.costPerTask.humanReview, color: "bg-amber-500" },
+  { label: "Risque d’erreur", value: DEMO_RESULT.costPerTask.errorRisk, color: "bg-rose-500" },
+];
+const DEMO_VARIABLE = DEMO_SEGMENTS.reduce((a, s) => a + s.value, 0);
+const DEMO_FIXED = DEMO_RESULT.aiMonthlyCost - DEMO.monthlyVolume * DEMO_VARIABLE;
+const DEMO_AI_FULL = DEMO_RESULT.aiMonthlyCost / DEMO.monthlyVolume;
+const DEMO_DEPLOY = compareDeployments(PRESETS["dossiers-confidentiels"]); // cas où le souverain gagne
+const DEMO_PORTFOLIO = evaluatePortfolio(Object.values(PRESETS));
+
+function fmtCount(v: number, kind?: string) {
+  return kind === "eur" ? eur.format(v) : num.format(v);
+}
+
+function BrowserFrame({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="show-frame overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40 [will-change:transform]">
+      <div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3 py-2.5">
+        <span className="size-2.5 rounded-full bg-rose-400" />
+        <span className="size-2.5 rounded-full bg-amber-400" />
+        <span className="size-2.5 rounded-full bg-emerald-400" />
+        <span className="ml-3 truncate text-[10px] text-slate-400">{label}</span>
+      </div>
+      <div className="bg-white p-4 text-slate-900 sm:p-5">{children}</div>
+    </div>
+  );
+}
+
+function ShowSection({
+  kicker,
+  title,
+  body,
+  reverse,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  body: string;
+  reverse?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="show-section px-4 py-24 sm:px-8">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
+        <div className={reverse ? "lg:order-2" : ""}>
+          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+            {kicker}
+          </p>
+          <h2 className="show-reveal mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+          <p className="show-reveal mt-4 max-w-md text-sm leading-relaxed text-white/70">{body}</p>
+        </div>
+        <div className={`show-reveal ${reverse ? "lg:order-1" : ""}`}>{children}</div>
+      </div>
+    </section>
+  );
+}
+
+function LandingShowcase({ onCTA }: { onCTA: () => void }) {
+  useEffect(() => {
+    let mounted = true;
+    let cleanup = () => {};
+    (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]);
+      if (!mounted) return;
+      gsap.registerPlugin(ScrollTrigger);
+      const mm = gsap.matchMedia();
+      mm.add("(min-width: 769px) and (prefers-reduced-motion: no-preference)", () => {
+        const tweens: any[] = [];
+        // Révélation décalée du texte + des cadres par section.
+        gsap.utils.toArray<HTMLElement>(".show-section").forEach((sec) => {
+          tweens.push(
+            gsap.from(sec.querySelectorAll(".show-reveal"), {
+              opacity: 0,
+              y: 50,
+              duration: 0.8,
+              stagger: 0.12,
+              ease: "power3.out",
+              scrollTrigger: { trigger: sec, start: "top 75%" },
+            }),
+          );
+        });
+        // Parallaxe douce sur les cadres.
+        gsap.utils.toArray<HTMLElement>(".show-frame").forEach((frame) => {
+          tweens.push(
+            gsap.to(frame, {
+              y: -36,
+              ease: "none",
+              scrollTrigger: { trigger: frame, start: "top bottom", end: "bottom top", scrub: true },
+            }),
+          );
+        });
+        // Compteurs animés (0 → cible) quand ils entrent dans le viewport.
+        gsap.utils.toArray<HTMLElement>(".count").forEach((el) => {
+          const target = Number(el.dataset.target || 0);
+          const kind = el.dataset.kind;
+          el.textContent = fmtCount(0, kind);
+          const obj = { v: 0 };
+          tweens.push(
+            gsap.to(obj, {
+              v: target,
+              duration: 1.6,
+              ease: "power1.out",
+              scrollTrigger: { trigger: el, start: "top 85%" },
+              onUpdate: () => {
+                el.textContent = fmtCount(Math.round(obj.v), kind);
+              },
+            }),
+          );
+        });
+        return () =>
+          tweens.forEach((t) => {
+            t.scrollTrigger?.kill();
+            t.kill();
+          });
+      });
+      cleanup = () => mm.revert();
+    })();
+    return () => {
+      mounted = false;
+      cleanup();
+    };
+  }, []);
+
+  return (
+    <div className="relative text-white">
+      {/* 00 — La partie immergée (intro, glass cards sur la vidéo) */}
+      <section className="show-section px-4 py-24 sm:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80">
             La partie immergée
           </p>
-          <h2 className="mt-3 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="show-reveal mt-3 max-w-2xl text-2xl font-bold tracking-tight drop-shadow sm:text-3xl">
             Ce qui coûte vraiment dans un projet d’automatisation est sous la surface
           </h2>
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
             {HANDOFF_BLOCKS.map(({ Icon, title, body }) => (
               <div
                 key={title}
-                className="handoff-block rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
+                className="show-reveal rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-md"
               >
                 <Icon className="size-5 text-cyan-200" />
                 <h3 className="mt-4 text-base font-semibold">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-white/70">{body}</p>
+                <p className="mt-2 text-sm leading-relaxed text-white/75">{body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
-    </main>
+
+      {/* 01 — Langage naturel → verdict */}
+      <ShowSection
+        kicker="01 · Langage naturel"
+        title="Décrivez un process. On le chiffre."
+        body="Pas de tableur, pas de jargon. Une phrase suffit : Claude Haiku en déduit le volume, le temps humain, le risque, et notre moteur tranche."
+      >
+        <BrowserFrame label="aiceberg.app — analyse">
+          <div className="space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              « Répondre aux 500 emails SAV par mois et les classer par urgence »
+            </div>
+            <div className="text-center text-lg text-slate-300">↓</div>
+            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                <Check className="size-3.5" /> {DEMO_RESULT.recommendation}
+              </span>
+              <p className="mt-2 text-3xl font-bold text-emerald-600">
+                {eur.format(DEMO_RESULT.monthlySavings)}
+                <span className="text-sm font-normal text-slate-500"> / mois</span>
+              </p>
+              <p className="text-xs text-slate-500">économies, vérification et risque inclus</p>
+            </div>
+          </div>
+        </BrowserFrame>
+      </ShowSection>
+
+      {/* 02 — Le vrai coût décomposé */}
+      <ShowSection
+        kicker="02 · Le vrai coût"
+        title="Le prix de l’API n’est que la pointe de l’iceberg"
+        body="Tokens, vérification humaine, risque d’erreur : on décompose le coût réel par tâche. Le segment vert des tokens est si fin qu’il se lit à peine. C’est le message."
+        reverse
+      >
+        <BrowserFrame label="aiceberg.app — coût par tâche">
+          <CompareBar
+            humanPerTask={DEMO_HUMAN_PER_TASK}
+            segments={DEMO_SEGMENTS}
+            fixedMonthly={DEMO_FIXED}
+            aiFullPerTask={DEMO_AI_FULL}
+          />
+        </BrowserFrame>
+      </ShowSection>
+
+      {/* 03 — Point de bascule */}
+      <ShowSection
+        kicker="03 · Point de bascule"
+        title="À partir de quel volume l’automatisation devient rentable"
+        body="On trace le coût humain contre le coût IA selon le volume. Le croisement, c’est votre seuil de bascule : en dessous, gardez l’humain ; au-dessus, automatisez."
+      >
+        <BrowserFrame label="aiceberg.app — seuil de bascule">
+          <div className="h-60 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={DEMO_CURVE} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="volume"
+                  stroke="#94a3b8"
+                  tickLine={false}
+                  axisLine={{ stroke: "#e2e8f0" }}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v: number) => num.format(v)}
+                />
+                <YAxis
+                  width={48}
+                  stroke="#94a3b8"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v: number) => `${num.format(v)} €`}
+                />
+                {DEMO_RESULT.breakEvenVolume !== null && (
+                  <ReferenceLine
+                    x={DEMO_RESULT.breakEvenVolume}
+                    stroke="#10b981"
+                    strokeDasharray="5 5"
+                    label={{ value: "Seuil", position: "insideTopRight", fill: "#10b981", fontSize: 10 }}
+                  />
+                )}
+                <Line type="monotone" dataKey="humanCost" name="Humain" stroke="#94a3b8" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="aiCost" name="IA" stroke="#4f46e5" strokeWidth={2.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </BrowserFrame>
+      </ShowSection>
+
+      {/* 04 — Cloud ou souverain */}
+      <ShowSection
+        kicker="04 · Déploiement"
+        title="Cloud, ou chez vous"
+        body="Trois voies chiffrées : humain, IA cloud, IA locale souveraine. Sur des données sensibles à fort volume, le local passe même devant le cloud sur le prix."
+        reverse
+      >
+        <BrowserFrame label="aiceberg.app — cloud ou souverain">
+          <div className="grid grid-cols-3 gap-3">
+            <DeployCard
+              label="Humain"
+              value={DEMO_DEPLOY.human.monthly}
+              active={DEMO_DEPLOY.cheapest === "human"}
+            />
+            <DeployCard
+              label="IA cloud"
+              value={DEMO_DEPLOY.cloud.monthly}
+              active={DEMO_DEPLOY.cheapest === "cloud"}
+            />
+            <DeployCard
+              label="Local souverain"
+              value={DEMO_DEPLOY.local.monthly}
+              active={DEMO_DEPLOY.cheapest === "local"}
+              badge="Vos données chez vous"
+            />
+          </div>
+        </BrowserFrame>
+      </ShowSection>
+
+      {/* 05 — Portefeuille, compteurs animés */}
+      <section className="show-section px-4 py-28 text-center sm:px-8">
+        <div className="mx-auto max-w-5xl">
+          <p className="show-reveal text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/70">
+            05 · À l’échelle de l’entreprise
+          </p>
+          <h2 className="show-reveal mx-auto mt-3 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
+            Tous vos process passés au crible, un seul arbitrage consolidé
+          </h2>
+          <div className="mt-14 grid gap-8 sm:grid-cols-3">
+            <div className="show-reveal">
+              <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
+                <span
+                  className="count"
+                  data-target={Math.round(DEMO_PORTFOLIO.monthlySavingsTotal)}
+                  data-kind="eur"
+                >
+                  {eur.format(DEMO_PORTFOLIO.monthlySavingsTotal)}
+                </span>
+              </p>
+              <p className="mt-2 text-sm text-white/60">d’économies potentielles / mois</p>
+            </div>
+            <div className="show-reveal">
+              <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
+                <span className="count" data-target={DEMO_PORTFOLIO.processes.length} data-kind="num">
+                  {num.format(DEMO_PORTFOLIO.processes.length)}
+                </span>
+              </p>
+              <p className="mt-2 text-sm text-white/60">process analysés en un coup d’œil</p>
+            </div>
+            <div className="show-reveal">
+              <p className="text-4xl font-bold text-cyan-200 sm:text-5xl">
+                <span className="count" data-target={DEMO_PORTFOLIO.countAutomate} data-kind="num">
+                  {num.format(DEMO_PORTFOLIO.countAutomate)}
+                </span>
+              </p>
+              <p className="mt-2 text-sm text-white/60">à automatiser sans hésiter</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="px-4 py-32 text-center sm:px-8">
+        <div className="mx-auto max-w-2xl">
+          <h2 className="show-reveal text-3xl font-bold tracking-tight sm:text-4xl">
+            Prêt à savoir si vous devez vraiment automatiser ?
+          </h2>
+          <p className="show-reveal mt-4 text-base text-white/70">
+            Une phrase, trente secondes, un verdict chiffré et sourcé.
+          </p>
+          <button
+            type="button"
+            onClick={onCTA}
+            className="show-reveal mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-7 py-3.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03]"
+          >
+            <Sparkles className="size-4" />
+            Lancer une analyse
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
