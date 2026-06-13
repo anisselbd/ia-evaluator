@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, Check, Leaf, Minus } from "lucide-react";
 import {
   MODEL_FACTORS,
+  PRESETS,
   evaluate,
   rankModels,
   type ModelId,
@@ -92,6 +93,18 @@ function Index() {
             title="Le process à évaluer"
             sub="Paramètres économiques et opérationnels"
           />
+          <div className="mt-4 flex flex-wrap gap-2">
+            {Object.entries(PRESETS).map(([key, preset]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setScenario(preset)}
+                className="rounded-sm border border-border bg-panel px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+              >
+                {preset.taskName}
+              </button>
+            ))}
+          </div>
           <div className="mt-7 grid gap-4 sm:grid-cols-2">
             <Field label="Nom de la tâche" wide>
               <input

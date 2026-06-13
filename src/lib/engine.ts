@@ -28,6 +28,60 @@ export interface Scenario {
   region: Region;
 }
 
+export const PRESETS: Record<string, Scenario> = {
+  sav: {
+    taskName: "Répondre à un email SAV",
+    monthlyVolume: 500,
+    humanMinutesPerTask: 8,
+    loadedHourlyCostEur: 35,
+    model: "claude-sonnet-4-6",
+    inputTokensPerTask: 1200,
+    outputTokensPerTask: 350,
+    humanReviewRate: 0.4,
+    reviewMinutes: 2,
+    residualErrorRate: 0.02,
+    errorCostEur: 25,
+    setupCostEur: 1500,
+    amortizationMonths: 12,
+    monthlySubscriptionEur: 40,
+    region: "france",
+  },
+  "fiches-produit": {
+    taskName: "Rédaction de fiches produit",
+    monthlyVolume: 200,
+    humanMinutesPerTask: 45,
+    loadedHourlyCostEur: 42,
+    model: "claude-sonnet-4-6",
+    inputTokensPerTask: 2500,
+    outputTokensPerTask: 1800,
+    humanReviewRate: 0.6,
+    reviewMinutes: 8,
+    residualErrorRate: 0.03,
+    errorCostEur: 80,
+    setupCostEur: 3000,
+    amortizationMonths: 12,
+    monthlySubscriptionEur: 60,
+    region: "france",
+  },
+  "tri-candidatures": {
+    taskName: "Tri de candidatures RH",
+    monthlyVolume: 300,
+    humanMinutesPerTask: 15,
+    loadedHourlyCostEur: 45,
+    model: "claude-haiku-4-5",
+    inputTokensPerTask: 3000,
+    outputTokensPerTask: 400,
+    humanReviewRate: 0.8,
+    reviewMinutes: 5,
+    residualErrorRate: 0.01,
+    errorCostEur: 200,
+    setupCostEur: 2500,
+    amortizationMonths: 12,
+    monthlySubscriptionEur: 50,
+    region: "france",
+  },
+};
+
 export interface CostBreakdownPerTask {
   apiTokens: number;
   humanReview: number;
