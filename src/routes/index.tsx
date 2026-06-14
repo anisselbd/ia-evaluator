@@ -1380,6 +1380,14 @@ function LandingHero({
         return () => video.removeEventListener("timeupdate", onTimeUpdate);
       });
 
+      // Re-mesure les positions une fois les polices chargées : sinon le tout
+      // dernier reveal (près du bas de page) peut ne jamais se déclencher selon
+      // le moment où la police arrive et décale la mise en page.
+      if (typeof document !== "undefined" && document.fonts) {
+        document.fonts.ready.then(() => {
+          if (mounted) ScrollTrigger.refresh();
+        });
+      }
       cleanup = () => mm.revert();
     })();
 
@@ -1701,6 +1709,14 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
             t.kill();
           });
       });
+      // Re-mesure les positions une fois les polices chargées : sinon le tout
+      // dernier reveal (près du bas de page) peut ne jamais se déclencher selon
+      // le moment où la police arrive et décale la mise en page.
+      if (typeof document !== "undefined" && document.fonts) {
+        document.fonts.ready.then(() => {
+          if (mounted) ScrollTrigger.refresh();
+        });
+      }
       cleanup = () => mm.revert();
     })();
     return () => {
