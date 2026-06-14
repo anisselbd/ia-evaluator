@@ -77,14 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bascule — Décider d’automatiser avec l’IA" },
+      { title: "AIceberg — Le vrai coût de l’automatisation IA" },
       {
         name: "description",
         content:
           "Évaluez le coût complet, le risque et l’impact d’une automatisation IA pour votre PME.",
       },
-      { name: "author", content: "Bascule" },
-      { property: "og:title", content: "Bascule — Décider d’automatiser avec l’IA" },
+      { name: "author", content: "AIceberg" },
+      { property: "og:title", content: "AIceberg — Le vrai coût de l’automatisation IA" },
       {
         property: "og:description",
         content:
@@ -98,6 +98,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", type: "image/png", href: "/logo-aiceberg.png" },
+      { rel: "apple-touch-icon", href: "/logo-aiceberg.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
