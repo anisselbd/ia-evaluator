@@ -1456,7 +1456,6 @@ function LandingHero({
                   disabled={estimating || !description.trim()}
                   className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
                 >
-                  <Sparkles className="size-4" />
                   {estimating ? "Analyse en cours…" : "Analyser"}
                 </button>
               </div>
