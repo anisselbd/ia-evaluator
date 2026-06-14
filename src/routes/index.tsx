@@ -1550,9 +1550,21 @@ function RevealWords({ text, className }: { text: string; className?: string }) 
   );
 }
 
+// Reveal "rideau" : un panneau accent balaie le cadre et le dévoile, avec un
+// zoom de réglage. Le cadre est masqué (autoAlpha) au repos côté desktop ; en
+// mobile / sans GSAP il reste visible et le panneau reste invisible (scale-x-0).
+function RevealFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="reveal-frame relative overflow-hidden rounded-2xl shadow-2xl shadow-black/40">
+      <div className="reveal-frame-inner [will-change:transform]">{children}</div>
+      <div className="reveal-frame-cover pointer-events-none absolute inset-0 origin-left scale-x-0 bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500" />
+    </div>
+  );
+}
+
 function BrowserFrame({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="show-frame overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40 [will-change:transform]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white">
       <div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3 py-2.5">
         <span className="size-2.5 rounded-full bg-rose-400" />
         <span className="size-2.5 rounded-full bg-amber-400" />
@@ -1589,7 +1601,9 @@ function ShowSection({
           </h2>
           <p className="reveal-up mt-4 max-w-md text-sm leading-relaxed text-white/75">{body}</p>
         </div>
-        <div className={`frame-wrap ${reverse ? "lg:order-1" : ""}`}>{children}</div>
+        <div className={`frame-wrap ${reverse ? "lg:order-1" : ""}`}>
+          <RevealFrame>{children}</RevealFrame>
+        </div>
       </div>
     </section>
   );
@@ -1639,21 +1653,20 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
             );
           }
         });
-        // Cadres : entrée 3D (bascule depuis le bas + zoom + fondu) puis parallaxe.
-        gsap.utils.toArray<HTMLElement>(".show-frame").forEach((frame) => {
-          tweens.push(
-            gsap.from(frame, {
-              opacity: 0,
-              yPercent: 6,
-              rotateX: 16,
-              scale: 0.94,
-              transformPerspective: 1000,
-              transformOrigin: "50% 90%",
-              duration: 1.1,
-              ease: "power3.out",
-              scrollTrigger: { trigger: frame, start: "top 82%" },
-            }),
-          );
+        // Cadres : reveal "rideau" — un panneau accent balaie l'écran puis le
+        // dévoile (zoom de réglage pendant le dévoilement). Puis parallaxe au scrub.
+        gsap.utils.toArray<HTMLElement>(".reveal-frame").forEach((mask) => {
+          const inner = mask.querySelector(".reveal-frame-inner");
+          const cover = mask.querySelector(".reveal-frame-cover");
+          gsap.set(inner, { autoAlpha: 0 });
+          const tl = gsap.timeline({ scrollTrigger: { trigger: mask, start: "top 80%" } });
+          tl.set(cover, { scaleX: 0, transformOrigin: "left center" })
+            .to(cover, { scaleX: 1, duration: 0.45, ease: "power2.in" })
+            .set(inner, { autoAlpha: 1 })
+            .set(cover, { transformOrigin: "right center" })
+            .to(cover, { scaleX: 0, duration: 0.6, ease: "power3.out" })
+            .from(inner, { scale: 1.12, duration: 0.9, ease: "power3.out" }, "<");
+          tweens.push(tl);
         });
         gsap.utils.toArray<HTMLElement>(".frame-wrap").forEach((el) => {
           tweens.push(
