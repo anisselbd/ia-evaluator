@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="public/hero-poster.jpg" alt="Iceberg, partie émergée et immergée" width="100%" />
+  <img src=".github/demo.gif" alt="Démo d'AIceberg" width="100%" />
 </p>
 
 ---
