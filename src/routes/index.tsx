@@ -1954,7 +1954,7 @@ function LandingShowcase({ onCTA }: { onCTA: () => void }) {
             <button type="button" onClick={onCTA} className="transition-colors hover:text-white">
               Lancer une analyse
             </button>
-            <span className="text-white/45">Vibe Coding Arena · EuraTechnologies · juin 2026</span>
+            <span className="text-white/45">Hackathon · EuraTechnologies · juin 2026</span>
           </nav>
         </div>
         <div className="mx-auto mt-10 max-w-6xl border-t border-white/5 pt-6 text-[11px] leading-relaxed text-white/40">

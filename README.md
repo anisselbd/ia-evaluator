@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <em>Vibe Coding Arena · EuraTechnologies, Lille · juin 2026 · brief 07 « Le vrai coût de l'IA »</em>
+  <em>Hackathon · EuraTechnologies, Lille · juin 2026 · thème « Le vrai coût de l'IA »</em>
 </p>
 
 <p align="center">
